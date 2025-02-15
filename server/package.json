@@ -1,0 +1,29 @@
+{
+  "name": "reservaja",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon src/index.js",
+    "lint": "eslint . --ext .js,.ts",
+    "lint:fix": "eslint . --ext .js,.ts --fix",
+    "format": "prettier --write ."
+  },
+  "author": "Carlos Barboza",
+  "license": "ISC",
+  "description": "Reserva Já API - An app for scheduling",
+  "dependencies": {
+    "express": "^4.21.2",
+    "uuidv4": "^6.2.13"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "eslint": "^9.20.1",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "globals": "^15.15.0",
+    "nodemon": "^3.1.9",
+    "prettier": "3.5.1"
+  },
+  "keywords": []
+}
