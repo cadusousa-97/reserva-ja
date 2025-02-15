@@ -1,11 +1,19 @@
+const UserRepository = require('../repositories/UserRepository');
 class UserController {
-  index(req, res) {
-    //listar todos usuários
-    res.send('Send from User Controller');
+  async index(req, res) {
+    const users = await UserRepository.findAll();
+    res.json(users);
   }
 
-  show() {
-    //obter um usuário
+  async show(req, res) {
+    const { id } = req.params;
+    const user = await UserRepository.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
   }
 
   store() {
@@ -16,8 +24,17 @@ class UserController {
     //editar um usuário
   }
 
-  delete() {
-    //deletar um usuário
+  async delete(req, res) {
+    const { id } = req.params;
+    const user = await UserRepository.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    await UserRepository.delete(id);
+
+    res.sendStatus(204);
   }
 }
 

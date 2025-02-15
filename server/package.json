@@ -14,7 +14,7 @@
   "description": "Reserva Já API - An app for scheduling",
   "dependencies": {
     "express": "^4.21.2",
-    "uuidv4": "^6.2.13"
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
