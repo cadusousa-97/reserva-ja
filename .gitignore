@@ -1,0 +1,41 @@
+# ----------------------------------------------------------------
+# Geral (IDE, OS, Logs)
+# ----------------------------------------------------------------
+.vscode/
+.idea/
+*.log
+.DS_Store
+
+# ----------------------------------------------------------------
+# Backend (Pasta /server)
+# ----------------------------------------------------------------
+
+# Dependências do backend
+server/node_modules/
+
+# O código compilado (gerado automaticamente)
+server/dist/
+
+# O arquivo de segredos MAIS IMPORTANTE
+# Contém a senha do banco de dados!
+server/.env
+
+# A senha do banco em texto puro! (Usada pelo compose)
+server/db/password.txt
+
+# Os dados reais do banco de dados (se você rodar localmente)
+server/db-data/
+
+# ----------------------------------------------------------------
+# Frontend (Pasta /client)
+# ----------------------------------------------------------------
+
+# Dependências do frontend
+client/node_modules/
+
+# O build de produção do frontend (gerado automaticamente)
+client/dist/
+client/build/
+
+# Segredos locais do frontend
+client/.env.local
