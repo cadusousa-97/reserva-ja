@@ -9,6 +9,8 @@ server/dist/
 
 server/.env
 
+server/prisma/node_modules
+
 server/db/password.txt
 
 server/db-data/
