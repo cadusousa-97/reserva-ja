@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Token" ALTER COLUMN "token" SET DATA TYPE VARCHAR(255);
