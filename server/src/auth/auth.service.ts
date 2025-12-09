@@ -7,12 +7,16 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import crypto from 'crypto';
 import * as argon2 from 'argon2';
 import type { Token } from '@prisma/client';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable({})
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
-  async login(email: string) {
+  async send(email: string) {
     const user = await this.prisma.user.findUnique({
       where: {
         email,
@@ -40,12 +44,22 @@ export class AuthService {
     });
   }
 
-  async verify(email: string, token: string) {
+  async verifyToken(email: string, token: string) {
     const user = await this.prisma.user.findUnique({
       where: {
         email: email,
       },
+      include: {
+        employeeProfiles: true,
+      },
     });
+
+    if (!user) {
+      throw new NotFoundException();
+    }
+
+    if (user.employeeProfiles.length > 0) {
+    }
 
     const now = new Date();
 
@@ -77,5 +91,16 @@ export class AuthService {
         id: matchedToken?.id,
       },
     });
+
+    const payload = {
+      sub: user.id,
+      name: user.name,
+    };
+
+    return { access_token: await this.jwtService.signAsync(payload) };
+  }
+
+  async verifyCompany(companyId: string) {
+    return true;
   }
 }

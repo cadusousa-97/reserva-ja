@@ -14,6 +14,12 @@ enum AppointmentStatus {
   NO_SHOW
 }
 
+enum EmployeeRole {
+  OWNER
+  MANAGER
+  REGULAR
+}
+
 model User {
   id    String @id @default(uuid()) @db.Uuid
   name  String @db.VarChar(100)
@@ -42,6 +48,7 @@ model Employee {
   userId       String?       @db.Uuid
   company      Company?      @relation(fields: [companyId], references: [id])
   companyId    String?       @db.Uuid
+  role         EmployeeRole  @default(REGULAR)
   appointments Appointment[]
 
   @@unique([userId, companyId])
