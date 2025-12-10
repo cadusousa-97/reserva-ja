@@ -1,8 +1,19 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignInDto } from 'src/dto/signIn.dto';
-import { VerifyDto } from 'src/dto/verify.dto';
+import { VerifyDto, VerifyResponseDto } from 'src/dto/verify.dto';
 import { VerifyCompanyDto } from 'src/dto/verifyCompany.dto';
+import type { Request, Response } from 'express';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -15,15 +26,40 @@ export class AuthController {
   }
 
   @Post('verify')
-  async verify(@Body() verifyDto: VerifyDto) {
-    const tokens = await this.authService.verifyToken(
+  async verify(
+    @Body() verifyDto: VerifyDto,
+    @Res({ passthrough: true }) res: Response<VerifyResponseDto>,
+  ) {
+    const { access_token, user } = await this.authService.verifyToken(
       verifyDto.email,
       verifyDto.token,
     );
+
+    res.cookie('access_token', access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 3600000,
+    });
+
+    const response: VerifyResponseDto = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    };
+
+    return response;
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('select-company')
-  async verifyCompany(@Body() verifyCompanyDto: VerifyCompanyDto) {
-    await this.authService.verifyCompany(verifyCompanyDto.companyId);
+  async verifyCompany(
+    @Body() verifyCompanyDto: VerifyCompanyDto,
+    @Req() req: Request,
+  ) {
+    await this.authService.verifyCompany(
+      verifyCompanyDto.companyId,
+      req?.user?.userId,
+    );
   }
 }

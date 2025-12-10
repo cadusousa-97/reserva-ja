@@ -97,10 +97,10 @@ export class AuthService {
       name: user.name,
     };
 
-    return { access_token: await this.jwtService.signAsync(payload) };
+    return { access_token: await this.jwtService.signAsync(payload), user };
   }
 
-  async verifyCompany(companyId: string) {
+  async verifyCompany(companyId: string, userId: string) {
     return true;
   }
 }
