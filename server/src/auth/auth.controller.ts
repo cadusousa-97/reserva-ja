@@ -58,12 +58,20 @@ export class AuthController {
   async verifyCompany(
     @Body() verifyCompanyDto: VerifyCompanyDto,
     @CurrentUser() user: UserPayload,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    const response = await this.authService.verifyCompany(
+    const { access_token } = await this.authService.verifyCompany(
       verifyCompanyDto.companyId,
       user.sub,
     );
 
-    return response;
+    res.cookie('access_token', access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 3600000,
+    });
+
+    return { name: user.name, email: user.email };
   }
 }

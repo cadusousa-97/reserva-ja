@@ -103,6 +103,29 @@ export class AuthService {
   }
 
   async verifyCompany(companyId: string, userId: string) {
-    return true;
+    const employeeOfThisCompany = await this.prisma.employee.findFirst({
+      where: {
+        userId: userId,
+        companyId: companyId,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    if (!employeeOfThisCompany) {
+      throw new UnauthorizedException(
+        'Usuário não é funcionário da empresa selecionada.',
+      );
+    }
+
+    const payload = {
+      sub: employeeOfThisCompany.user?.id,
+      name: employeeOfThisCompany.user?.name,
+      email: employeeOfThisCompany.user?.email,
+      companyId: employeeOfThisCompany.companyId,
+    };
+
+    return { access_token: await this.jwtService.signAsync(payload) };
   }
 }
