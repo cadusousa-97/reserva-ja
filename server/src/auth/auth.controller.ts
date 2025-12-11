@@ -14,6 +14,8 @@ import { VerifyDto, VerifyResponseDto } from 'src/dto/verify.dto';
 import { VerifyCompanyDto } from 'src/dto/verifyCompany.dto';
 import type { Request, Response } from 'express';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
+import type { UserPayload } from './interfaces/user-payload.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -55,11 +57,13 @@ export class AuthController {
   @Post('select-company')
   async verifyCompany(
     @Body() verifyCompanyDto: VerifyCompanyDto,
-    @Req() req: Request,
+    @CurrentUser() user: UserPayload,
   ) {
-    await this.authService.verifyCompany(
+    const response = await this.authService.verifyCompany(
       verifyCompanyDto.companyId,
-      req?.user?.userId,
+      user.sub,
     );
+
+    return response;
   }
 }

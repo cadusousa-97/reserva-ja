@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import * as argon2 from 'argon2';
 import type { Token } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
+import { UserPayload } from './interfaces/user-payload.interface';
 
 @Injectable({})
 export class AuthService {
@@ -92,9 +93,10 @@ export class AuthService {
       },
     });
 
-    const payload = {
+    const payload: UserPayload = {
       sub: user.id,
       name: user.name,
+      email: user.email,
     };
 
     return { access_token: await this.jwtService.signAsync(payload), user };
