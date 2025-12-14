@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { UnauthorizedException } from '@nestjs/common';
 
 describe('Auth service', () => {
   let service: AuthService;
@@ -53,5 +54,16 @@ describe('Auth service', () => {
     expect(
       service.verifyCompany(mockEmployee.companyId, mockEmployee.userId),
     ).resolves.toMatchObject({ access_token: 'mock_token' });
+  });
+
+  test('Should return UnauthorizedException if user is not employee', () => {
+    const mockCompanyId: string = 'a00ac000-0000-0000-ab0f-000a00b0e000';
+    const mockUserId: string = 'a00ac000-0000-0000-ab0f-000a00b0e000';
+
+    (prisma.employee.findFirst as jest.Mock).mockResolvedValue(null);
+
+    expect(service.verifyCompany(mockCompanyId, mockUserId)).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 });

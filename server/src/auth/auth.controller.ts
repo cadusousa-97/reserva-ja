@@ -12,7 +12,7 @@ import { AuthService } from './auth.service';
 import { SignInDto } from 'src/dto/signIn.dto';
 import { VerifyDto, VerifyResponseDto } from 'src/dto/verify.dto';
 import { VerifyCompanyDto } from 'src/dto/verifyCompany.dto';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { UserPayload } from './interfaces/user-payload.interface';
