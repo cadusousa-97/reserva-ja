@@ -17,6 +17,8 @@ describe('Auth service', () => {
           provide: PrismaService,
           useValue: {
             employee: { findFirst: jest.fn() },
+            user: { findUnique: jest.fn() },
+            token: { create: jest.fn() },
           },
         },
         {
@@ -33,37 +35,71 @@ describe('Auth service', () => {
     jwt = module.get<JwtService>(JwtService);
   });
 
-  test('Should return a object with employee and user data', () => {
-    const mockEmployee = {
-      id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
-      userId: 'a00ac000-0000-0000-ab0f-000a00b0e111',
-      companyId: 'a00ac000-0000-0000-ab0f-000a00b0e222',
-      role: 'REGULAR',
-      user: {
-        id: 'a00ac000-0000-0000-ab0f-000a00b0e111',
-        email: 'test@email.com',
+  describe('send', () => {
+    test('Should create a token in db', async () => {
+      const mockUser = {
+        id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
         name: 'Carlos',
-        phone: '81988888888',
+        email: 'test@email.com',
+        phone: '81900000000',
+      };
+
+      const mockToken = {
+        id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
+        userId: 'a00ac000-0000-0000-ab0f-000a00b0e111',
+        token: 'some_token',
         createdAt: Date.now(),
-      },
-    };
+        expiresAt: Date.now(),
+      };
 
-    (prisma.employee.findFirst as jest.Mock).mockResolvedValue(mockEmployee);
-    (jwt.signAsync as jest.Mock).mockResolvedValue('mock_token');
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      (prisma.token.create as jest.Mock).mockResolvedValue(mockToken);
 
-    expect(
-      service.verifyCompany(mockEmployee.companyId, mockEmployee.userId),
-    ).resolves.toMatchObject({ access_token: 'mock_token' });
+      await service.send(mockUser.email);
+
+      expect(prisma.token.create).toHaveBeenCalledWith({
+        data: {
+          userId: mockUser.id,
+          token: expect.any(String),
+          expiresAt: expect.any(Date),
+        },
+      });
+    });
   });
 
-  test('Should return UnauthorizedException if user is not employee', () => {
-    const mockCompanyId: string = 'a00ac000-0000-0000-ab0f-000a00b0e000';
-    const mockUserId: string = 'a00ac000-0000-0000-ab0f-000a00b0e000';
+  describe('verifyCompany', () => {
+    test('Should return a object with employee and user data', () => {
+      const mockEmployee = {
+        id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
+        userId: 'a00ac000-0000-0000-ab0f-000a00b0e111',
+        companyId: 'a00ac000-0000-0000-ab0f-000a00b0e222',
+        role: 'REGULAR',
+        user: {
+          id: 'a00ac000-0000-0000-ab0f-000a00b0e111',
+          email: 'test@email.com',
+          name: 'Carlos',
+          phone: '81988888888',
+          createdAt: Date.now(),
+        },
+      };
 
-    (prisma.employee.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.employee.findFirst as jest.Mock).mockResolvedValue(mockEmployee);
+      (jwt.signAsync as jest.Mock).mockResolvedValue('mock_token');
 
-    expect(service.verifyCompany(mockCompanyId, mockUserId)).rejects.toThrow(
-      UnauthorizedException,
-    );
+      expect(
+        service.verifyCompany(mockEmployee.companyId, mockEmployee.userId),
+      ).resolves.toMatchObject({ access_token: 'mock_token' });
+    });
+
+    test('Should return UnauthorizedException if user is not employee', () => {
+      const mockCompanyId: string = 'a00ac000-0000-0000-ab0f-000a00b0e000';
+      const mockUserId: string = 'a00ac000-0000-0000-ab0f-000a00b0e000';
+
+      (prisma.employee.findFirst as jest.Mock).mockResolvedValue(null);
+
+      expect(service.verifyCompany(mockCompanyId, mockUserId)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
   });
 });
