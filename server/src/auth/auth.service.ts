@@ -50,16 +50,10 @@ export class AuthService {
       where: {
         email: email,
       },
-      include: {
-        employeeProfiles: true,
-      },
     });
 
     if (!user) {
       throw new NotFoundException();
-    }
-
-    if (user.employeeProfiles.length > 0) {
     }
 
     const now = new Date();
