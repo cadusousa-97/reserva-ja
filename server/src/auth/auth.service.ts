@@ -9,6 +9,7 @@ import * as argon2 from 'argon2';
 import type { Token } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { UserPayload } from './interfaces/user-payload.interface';
+import { SignUpDto } from 'src/dto/signUp.dto';
 
 @Injectable({})
 export class AuthService {
@@ -17,7 +18,29 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async send(email: string) {
+  async register(signUpObject: SignUpDto) {
+    const { email, name, phone } = signUpObject;
+
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+
+    if (!user) {
+      await this.prisma.user.create({
+        data: {
+          email: email,
+          name: name,
+          phone: phone,
+        },
+      });
+    }
+
+    await this.sendToken(email);
+  }
+
+  async sendToken(email: string) {
     const user = await this.prisma.user.findUnique({
       where: {
         email,

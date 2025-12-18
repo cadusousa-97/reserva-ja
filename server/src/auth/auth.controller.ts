@@ -16,15 +16,21 @@ import type { Response } from 'express';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { UserPayload } from './interfaces/user-payload.interface';
+import { SignUpDto } from 'src/dto/signUp.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Post('signup')
+  async signUp(@Body() signUpDto: SignUpDto) {
+    await this.authService.register(signUpDto);
+  }
+
   @HttpCode(HttpStatus.OK)
   @Post('signin')
-  signIn(@Body() signInDto: SignInDto) {
-    return this.authService.send(signInDto.email);
+  async signIn(@Body() signInDto: SignInDto) {
+    await this.authService.sendToken(signInDto.email);
   }
 
   @Post('verify')

@@ -37,7 +37,7 @@ describe('Auth service', () => {
           provide: PrismaService,
           useValue: {
             employee: { findFirst: jest.fn() },
-            user: { findUnique: jest.fn() },
+            user: { findUnique: jest.fn(), create: jest.fn() },
             token: {
               create: jest.fn(),
               findMany: jest.fn(),
@@ -62,6 +62,21 @@ describe('Auth service', () => {
     (jwt.signAsync as jest.Mock).mockResolvedValue('mock_token');
   });
 
+  describe('register', () => {
+    test('Should call send token service if the user already exists', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+
+      const sendTokenSpy = jest
+        .spyOn(service, 'sendToken')
+        .mockResolvedValue(undefined);
+
+      await service.register(mockUser);
+
+      expect(prisma.user.create as jest.Mock).not.toHaveBeenCalled();
+      expect(sendTokenSpy).toHaveBeenCalledWith(mockUser.email);
+    });
+  });
+
   describe('send', () => {
     test('Should create a token in db', async () => {
       const mockToken = {
@@ -75,7 +90,7 @@ describe('Auth service', () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (prisma.token.create as jest.Mock).mockResolvedValue(mockToken);
 
-      await service.send(mockUser.email);
+      await service.sendToken(mockUser.email);
 
       expect(prisma.token.create).toHaveBeenCalledWith({
         data: {
