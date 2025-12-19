@@ -75,6 +75,26 @@ describe('Auth service', () => {
       expect(prisma.user.create as jest.Mock).not.toHaveBeenCalled();
       expect(sendTokenSpy).toHaveBeenCalledWith(mockUser.email);
     });
+
+    test('Should create a user if cannot find one', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.user.create as jest.Mock).mockResolvedValue(mockUser);
+
+      const sendTokenSpy = jest
+        .spyOn(service, 'sendToken')
+        .mockResolvedValue(undefined);
+
+      await service.register(mockUser);
+
+      expect(prisma.user.create as jest.Mock).toHaveBeenCalledWith({
+        data: {
+          email: mockUser.email,
+          name: mockUser.name,
+          phone: mockUser.phone,
+        },
+      });
+      expect(sendTokenSpy).toHaveBeenCalledWith(mockUser.email);
+    });
   });
 
   describe('send', () => {
