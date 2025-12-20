@@ -10,12 +10,14 @@ import type { Token } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { UserPayload } from './interfaces/user-payload.interface';
 import { SignUpDto } from 'src/dto/signUp.dto';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable({})
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private mailService: MailService,
   ) {}
 
   async register(signUpObject: SignUpDto) {
@@ -66,6 +68,14 @@ export class AuthService {
         expiresAt: expirationDateToken,
       },
     });
+
+    const mailObject = {
+      to: email,
+      subject: 'Novo email!',
+      text: `Seu código é ${tokenString}`,
+    };
+
+    await this.mailService.sendMail(mailObject);
   }
 
   async verifyToken(email: string, token: string) {
