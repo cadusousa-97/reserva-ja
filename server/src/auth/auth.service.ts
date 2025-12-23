@@ -71,8 +71,8 @@ export class AuthService {
 
     const mailObject = {
       to: email,
-      subject: 'Novo email!',
-      text: `Seu código é ${tokenString}`,
+      subject: 'Reserva Já: Código de acesso',
+      text: tokenString,
     };
 
     await this.mailService.sendMail(mailObject);
