@@ -3,7 +3,10 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import crypto from 'crypto';
 import * as argon2 from 'argon2';
+import { MailService } from 'src/mail/mail.service';
+import { MailerService } from '@nestjs-modules/mailer';
 
 jest.mock('argon2');
 
@@ -11,8 +14,8 @@ describe('Auth service', () => {
   let service: AuthService;
   let prisma: PrismaService;
   let jwt: JwtService;
+  let mail: MailService;
 
-  const mockEmail = 'test@email.com';
   const mockHashedToken = 'some_hashed_token';
   const mockUser = {
     id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
@@ -28,11 +31,23 @@ describe('Auth service', () => {
     createdAt: Date.now(),
     expiresAt: Date.now(),
   };
+  const mockMail = {
+    to: mockUser.email,
+    subject: 'Reserva Já: Código de acesso',
+    text: '111111',
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
+        MailService,
+        {
+          provide: MailerService,
+          useValue: {
+            sendMail: jest.fn(),
+          },
+        },
         {
           provide: PrismaService,
           useValue: {
@@ -55,6 +70,7 @@ describe('Auth service', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+    mail = module.get<MailService>(MailService);
     prisma = module.get<PrismaService>(PrismaService);
     jwt = module.get<JwtService>(JwtService);
 
@@ -120,23 +136,38 @@ describe('Auth service', () => {
         },
       });
     });
+
+    test('Should send the email', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+
+      const sendMailSpy = jest
+        .spyOn(mail, 'sendMail')
+        .mockResolvedValue(undefined);
+
+      jest.spyOn(crypto, 'randomInt' as any).mockReturnValue(111111);
+
+      await service.sendToken(mockUser.email);
+
+      expect(sendMailSpy).toHaveBeenCalledWith(mockMail);
+    });
   });
 
   describe('verifyToken', () => {
     test('Should throw NotFoundException if user not found', () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-      expect(service.verifyToken(mockEmail, mockHashedToken)).rejects.toThrow(
-        NotFoundException,
-      );
+      expect(
+        service.verifyToken(mockUser.email, mockHashedToken),
+      ).rejects.toThrow(NotFoundException);
     });
+
     test('Should throw UnauthorizedException if token is invalid or expired', () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (prisma.token.findMany as jest.Mock).mockResolvedValue([]);
 
-      expect(service.verifyToken(mockEmail, mockHashedToken)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      expect(
+        service.verifyToken(mockUser.email, mockHashedToken),
+      ).rejects.toThrow(UnauthorizedException);
     });
     test('Should verify token and return access_token', () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
