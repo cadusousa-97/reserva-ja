@@ -150,6 +150,18 @@ describe('Auth service', () => {
 
       expect(sendMailSpy).toHaveBeenCalledWith(mockMail);
     });
+
+    test('Should return error when send the email', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+
+      jest
+        .spyOn(mail, 'sendMail')
+        .mockRejectedValue(new Error('Erro ao enviar'));
+
+      expect(service.sendToken(mockUser.email)).rejects.toThrow(
+        'Erro ao enviar',
+      );
+    });
   });
 
   describe('verifyToken', () => {
