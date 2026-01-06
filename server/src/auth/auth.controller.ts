@@ -14,7 +14,7 @@ import { VerifyCompanyDto } from 'src/dto/verifyCompany.dto';
 import type { Response } from 'express';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
-import type { UserPayload } from './interfaces/user-payload.interface';
+import type { JwtPayload } from './interfaces/jwtPayload.interface';
 import { SignUpDto } from 'src/dto/signUp.dto';
 
 @Controller('auth')
@@ -37,7 +37,7 @@ export class AuthController {
     @Body() verifyDto: VerifyDto,
     @Res({ passthrough: true }) res: Response<VerifyResponseDto>,
   ) {
-    const { access_token, user } = await this.authService.verifyToken(
+    const { access_token, userPayload } = await this.authService.verifyToken(
       verifyDto.email,
       verifyDto.token,
     );
@@ -49,11 +49,7 @@ export class AuthController {
       maxAge: 3600000,
     });
 
-    const response: VerifyResponseDto = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-    };
+    const response: VerifyResponseDto = userPayload;
 
     return response;
   }
@@ -62,7 +58,7 @@ export class AuthController {
   @Post('select-company')
   async verifyCompany(
     @Body() verifyCompanyDto: VerifyCompanyDto,
-    @CurrentUser() user: UserPayload,
+    @CurrentUser() user: JwtPayload,
     @Res({ passthrough: true }) res: Response,
   ) {
     const { access_token } = await this.authService.verifyCompany(

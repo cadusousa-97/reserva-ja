@@ -8,7 +8,8 @@ import crypto from 'crypto';
 import * as argon2 from 'argon2';
 import type { Token } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
-import { UserPayload } from './interfaces/user-payload.interface';
+import { JwtPayload } from './interfaces/jwtPayload.interface';
+import { UserPayload } from './interfaces/userPayload.interface';
 import { SignUpDto } from 'src/dto/signUp.dto';
 import { MailService } from 'src/mail/mail.service';
 
@@ -83,6 +84,14 @@ export class AuthService {
       where: {
         email: email,
       },
+      include: {
+        employeeProfiles: {
+          include: {
+            company: true,
+          },
+        },
+        customerProfiles: true,
+      },
     });
 
     if (!user) {
@@ -120,13 +129,32 @@ export class AuthService {
       },
     });
 
-    const payload: UserPayload = {
+    const isUserEmployee = user.employeeProfiles[0] ? true : false;
+
+    const companiesData = user.employeeProfiles.map((profile) => {
+      return {
+        id: profile?.company.id,
+        name: profile?.company.name,
+      };
+    });
+
+    const payload: JwtPayload = {
       sub: user.id,
       name: user.name,
       email: user.email,
     };
 
-    return { access_token: await this.jwtService.signAsync(payload), user };
+    const userPayload: UserPayload = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      isEmployee: isUserEmployee,
+    };
+
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+      userPayload,
+    };
   }
 
   async verifyCompany(companyId: string, userId: string) {
