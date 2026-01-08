@@ -133,8 +133,8 @@ export class AuthService {
 
     const companiesData = user.employeeProfiles.map((profile) => {
       return {
-        id: profile?.company.id,
-        name: profile?.company.name,
+        id: profile.company.id,
+        name: profile.company.name,
       };
     });
 
