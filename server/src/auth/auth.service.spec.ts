@@ -23,6 +23,28 @@ describe('Auth service', () => {
     email: 'test@email.com',
     phone: '81900000000',
     createdAt: Date.now(),
+    employeeProfiles: [
+      {
+        company: {
+          id: 'a00ac000-0000-0000-ab1f-111a11b1e111',
+          name: 'Barbearia do Zé',
+          createdAt: Date.now(),
+        },
+      },
+    ],
+  };
+
+  const mockUserPayload = {
+    id: mockUser.id,
+    name: mockUser.name,
+    email: mockUser.email,
+    isEmployee: true,
+    companies: [
+      {
+        id: 'a00ac000-0000-0000-ab1f-111a11b1e111',
+        name: 'Barbearia do Zé',
+      },
+    ],
   };
   const mockToken = {
     id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
@@ -191,7 +213,7 @@ describe('Auth service', () => {
         service.verifyToken(mockUser.email, mockHashedToken),
       ).resolves.toMatchObject({
         access_token: 'mock_token',
-        user: mockUser,
+        userPayload: mockUserPayload,
       });
     });
   });
