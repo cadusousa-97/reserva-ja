@@ -23,21 +23,51 @@ export class AuthService {
 
   async register(signUpObject: SignUpDto) {
     const { email, name, phone } = signUpObject;
+    const now = new Date();
 
-    const user = await this.prisma.user.findUnique({
+    let user = await this.prisma.user.findUnique({
       where: {
         email,
       },
     });
 
     if (!user) {
-      await this.prisma.user.create({
+      user = await this.prisma.user.create({
         data: {
           email: email,
           name: name,
           phone: phone,
         },
       });
+    }
+
+    const invitation = await this.prisma.employeeInvitation.findFirst({
+      where: {
+        email,
+        status: 'PENDING',
+        expiresAt: {
+          gte: now,
+        },
+      },
+    });
+
+    if (invitation) {
+      await this.prisma.$transaction([
+        this.prisma.employee.create({
+          data: {
+            userId: user.id,
+            companyId: invitation.companyId,
+          },
+        }),
+        this.prisma.employeeInvitation.update({
+          data: {
+            status: 'ACCEPTED',
+          },
+          where: {
+            id: invitation.id,
+          },
+        }),
+      ]);
     }
 
     await this.sendToken(email);

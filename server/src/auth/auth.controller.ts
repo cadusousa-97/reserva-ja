@@ -75,4 +75,14 @@ export class AuthController {
 
     return { name: user.name, email: user.email };
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('signout')
+  async signOut(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+  }
 }
