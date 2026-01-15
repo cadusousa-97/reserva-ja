@@ -10,7 +10,7 @@ import type { Token } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './interfaces/jwtPayload.interface';
 import { UserPayload } from './interfaces/userPayload.interface';
-import { SignUpDto } from 'src/dto/signUp.dto';
+import { SignUpDto } from './dto/sign-up.dto';
 import { MailService } from 'src/mail/mail.service';
 
 @Injectable({})
@@ -210,6 +210,7 @@ export class AuthService {
       name: employeeOfThisCompany.user?.name,
       email: employeeOfThisCompany.user?.email,
       companyId: employeeOfThisCompany.companyId,
+      role: employeeOfThisCompany.role,
     };
 
     return { access_token: await this.jwtService.signAsync(payload) };

@@ -26,6 +26,16 @@ enum InvitationStatus {
   PENDING
 }
 
+enum CompanyType {
+  BEAUTY_SALON
+  BARBERSHOP
+  SPA
+  CLINIC
+  NAIL_SPA
+  LASH_STUDIO
+  OTHER
+}
+
 model User {
   id    String @id @default(uuid()) @db.Uuid
   name  String @db.VarChar(100)
@@ -118,14 +128,29 @@ model Service {
 }
 
 model Company {
-  id   String @id @default(uuid()) @db.Uuid
-  name String @db.VarChar(150)
-
+  id                  String               @id @default(uuid()) @db.Uuid
+  name                String               @db.VarChar(150)
+  cpfCnpj             String               @unique @db.VarChar(14)
+  companyType         CompanyType          @default(OTHER)
   services            Service[]
   employees           Employee[]
   customers           Customer[]
   appointments        Appointment[]
   employeeInvitations EmployeeInvitation[]
 
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  addresses Address[]
+}
+
+model Address {
+  id         String  @id @default(uuid()) @db.Uuid
+  Company    Company @relation(fields: [companyId], references: [id])
+  companyId  String  @db.Uuid
+  street     String
+  number     String
+  city       String
+  state      String  @db.VarChar(2)
+  zipCode    String  @db.VarChar(8)
+  complement String?
+  landmark   String?
 }

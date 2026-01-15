@@ -1,3 +1,4 @@
+import type { Response } from 'express';
 import {
   Body,
   Controller,
@@ -8,14 +9,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { SignInDto } from 'src/dto/signIn.dto';
-import { VerifyDto, VerifyResponseDto } from 'src/dto/verify.dto';
-import { VerifyCompanyDto } from 'src/dto/verifyCompany.dto';
-import type { Response } from 'express';
+import { SignInDto } from './dto/sign-in.dto';
+import { VerifyDto, VerifyResponseDto } from './dto/verify.dto';
+import { VerifyCompanyDto } from './dto/verify-company.dto';
+import { SignUpDto } from './dto/sign-up.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { JwtPayload } from './interfaces/jwtPayload.interface';
-import { SignUpDto } from 'src/dto/signUp.dto';
 
 @Controller('auth')
 export class AuthController {
