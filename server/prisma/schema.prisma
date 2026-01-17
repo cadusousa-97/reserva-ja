@@ -137,9 +137,9 @@ model Company {
   customers           Customer[]
   appointments        Appointment[]
   employeeInvitations EmployeeInvitation[]
+  addresses           Address[]
 
-  createdAt DateTime  @default(now())
-  addresses Address[]
+  createdAt DateTime @default(now())
 }
 
 model Address {

@@ -21,8 +21,8 @@ export class AuthService {
     private mailService: MailService,
   ) {}
 
-  async register(signUpObject: SignUpDto) {
-    const { email, name, phone } = signUpObject;
+  async register(signUpDto: SignUpDto) {
+    const { email, name, phone } = signUpDto;
     const now = new Date();
 
     let user = await this.prisma.user.findUnique({
@@ -100,13 +100,13 @@ export class AuthService {
       },
     });
 
-    const mailObject = {
+    const mail = {
       to: email,
       subject: 'Reserva Já: Código de acesso',
       text: tokenString,
     };
 
-    await this.mailService.sendMail(mailObject);
+    await this.mailService.sendMail(mail);
   }
 
   async verifyToken(email: string, token: string) {

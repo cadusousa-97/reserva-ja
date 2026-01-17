@@ -28,7 +28,7 @@ export class CreateCompanyDto {
   cpfCnpj: string;
   @IsNotEmpty()
   @IsEnum(CompanyType)
-  companyType: string;
+  companyType: CompanyType;
   @ValidateNested()
   @Type(() => CreateAddress)
   address: CreateAddress;
