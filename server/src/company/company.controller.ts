@@ -10,6 +10,6 @@ export class CompanyController {
 
   @Post('create')
   async createCompany(@Body() createCompanyDto: CreateCompanyDto) {
-    await this.companyService.createCompany(createCompanyDto);
+    return await this.companyService.createCompany(createCompanyDto);
   }
 }
