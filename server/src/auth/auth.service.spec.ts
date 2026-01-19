@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import * as argon2 from 'argon2';
 import { MailService } from 'src/mail/mail.service';
 import { MailerService } from '@nestjs-modules/mailer';
+import { EmployeeInvitation } from '@prisma/client';
 
 jest.mock('argon2');
 
@@ -46,6 +47,22 @@ describe('Auth service', () => {
       },
     ],
   };
+
+  const mockCreateEmployeePayload = {
+    userId: mockUserPayload.id,
+    companyId: 'a00ac000-0000-0000-ab0f-000a00b0e000',
+  };
+
+  const mockEmployeeInvitation: EmployeeInvitation = {
+    id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
+    email: 'test@email.com',
+    companyId: 'a00ac000-0000-0000-ab0f-111a11b1e111',
+    role: 'REGULAR',
+    token: 'random_token',
+    expiresAt: new Date(),
+    status: 'PENDING',
+  };
+
   const mockToken = {
     id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
     userId: 'a00ac000-0000-0000-ab0f-000a00b0e111',
@@ -73,12 +90,19 @@ describe('Auth service', () => {
         {
           provide: PrismaService,
           useValue: {
-            employee: { findFirst: jest.fn() },
-            user: { findUnique: jest.fn(), create: jest.fn() },
+            employee: { findFirst: jest.fn(), create: jest.fn() },
+            user: {
+              findUnique: jest.fn(),
+              create: jest.fn(),
+              update: jest.fn(),
+            },
             token: {
               create: jest.fn(),
               findMany: jest.fn(),
               delete: jest.fn(),
+            },
+            employeeInvitation: {
+              findFirst: jest.fn(),
             },
           },
         },
@@ -103,6 +127,9 @@ describe('Auth service', () => {
   describe('register', () => {
     test('Should call send token service if the user already exists', async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      (prisma.employeeInvitation.findFirst as jest.Mock).mockResolvedValue(
+        mockEmployeeInvitation,
+      );
 
       const sendTokenSpy = jest
         .spyOn(service, 'sendToken')
@@ -117,6 +144,9 @@ describe('Auth service', () => {
     test('Should create a user if cannot find one', async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
       (prisma.user.create as jest.Mock).mockResolvedValue(mockUser);
+      (prisma.employeeInvitation.findFirst as jest.Mock).mockResolvedValue(
+        mockEmployeeInvitation,
+      );
 
       const sendTokenSpy = jest
         .spyOn(service, 'sendToken')

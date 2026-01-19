@@ -11,7 +11,7 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
 
     interface ResponseData {
       status: number;
-      message: string;
+      message: Array<String>;
       error: string;
     }
 
@@ -20,7 +20,7 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
     const exceptionResponses: ResponseOptions = {
       P2002: {
         status: 409,
-        message: `Entrada duplicada para o campo: ${exception.meta?.target}`,
+        message: [`Entrada duplicada para o campo: ${exception.meta?.target}`],
         error: 'Conflict',
       },
     };

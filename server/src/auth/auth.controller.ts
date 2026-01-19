@@ -32,6 +32,7 @@ export class AuthController {
     await this.authService.sendToken(signInDto.email);
   }
 
+  @HttpCode(HttpStatus.OK)
   @Post('verify')
   async verify(
     @Body() verifyDto: VerifyDto,
