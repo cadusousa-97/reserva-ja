@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CompanyService } from './company.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Company } from '@prisma/client';
+import { CompanyType } from './dto/create-company.dto';
 
 describe('CompanyService', () => {
   let service: CompanyService;
@@ -17,7 +18,7 @@ describe('CompanyService', () => {
   const mockCreateCompanyPayload = {
     name: 'Jhon Doe Barber',
     cpfCnpj: '11122233344',
-    companyType: 'BARBERSHOP',
+    companyType: CompanyType.BARBERSHOP,
     address: {
       street: 'Nova Rua',
       number: '01',
@@ -54,7 +55,7 @@ describe('CompanyService', () => {
   });
 
   describe('findOne', () => {
-    test('Should find and return the company data', async () => {
+    test('Should find and return the company data', () => {
       (prisma.company.findUnique as jest.Mock).mockResolvedValue(
         mockCompanyData,
       );
@@ -62,6 +63,31 @@ describe('CompanyService', () => {
       expect(service.findOne(mockCompanyData.id)).resolves.toMatchObject(
         mockCompanyData,
       );
+    });
+  });
+
+  test('Should create a company', async () => {
+    (prisma.company.create as jest.Mock).mockResolvedValue(
+      mockCreateCompanyPayload,
+    );
+
+    await service.createCompany(mockCreateCompanyPayload);
+
+    expect(
+      service.createCompany(mockCreateCompanyPayload),
+    ).resolves.toMatchObject(mockCreateCompanyPayload);
+
+    expect(prisma.company.create as jest.Mock).toHaveBeenCalledWith({
+      data: {
+        name: mockCreateCompanyPayload.name,
+        cpfCnpj: mockCreateCompanyPayload.cpfCnpj,
+        companyType: mockCreateCompanyPayload.companyType,
+        addresses: {
+          create: {
+            ...mockCreateCompanyPayload.address,
+          },
+        },
+      },
     });
   });
 });

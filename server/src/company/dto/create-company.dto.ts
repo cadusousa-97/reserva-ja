@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 import { CreateAddress } from './create-address.dto';
 
-enum CompanyType {
+export enum CompanyType {
   BEAUTY_SALON = 'BEAUTY_SALON',
   BARBERSHOP = 'BARBERSHOP',
   SPA = 'SPA',

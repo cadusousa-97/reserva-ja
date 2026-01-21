@@ -103,7 +103,11 @@ describe('Auth service', () => {
             },
             employeeInvitation: {
               findFirst: jest.fn(),
+              update: jest.fn(),
             },
+            $transaction: jest
+              .fn()
+              .mockImplementation((promises) => Promise.all(promises)),
           },
         },
         {
@@ -162,6 +166,45 @@ describe('Auth service', () => {
         },
       });
       expect(sendTokenSpy).toHaveBeenCalledWith(mockUser.email);
+    });
+
+    test('Should create the employee and update employee invitation status, if it already exists', async () => {
+      (prisma.user.create as jest.Mock).mockResolvedValue(mockUser);
+      (prisma.employeeInvitation.findFirst as jest.Mock).mockResolvedValue(
+        mockEmployeeInvitation,
+      );
+
+      const sendTokenSpy = jest
+        .spyOn(service, 'sendToken')
+        .mockResolvedValue(undefined);
+
+      await service.register(mockUser);
+
+      expect(prisma.user.create as jest.Mock).toHaveBeenCalledWith({
+        data: {
+          email: mockUser.email,
+          name: mockUser.name,
+          phone: mockUser.phone,
+        },
+      });
+
+      expect(sendTokenSpy).toHaveBeenCalledWith(mockUser.email);
+      expect(prisma.employee.create as jest.Mock).toHaveBeenCalledWith({
+        data: {
+          userId: mockUser.id,
+          companyId: mockEmployeeInvitation.companyId,
+        },
+      });
+      expect(
+        prisma.employeeInvitation.update as jest.Mock,
+      ).toHaveBeenCalledWith({
+        data: {
+          status: 'ACCEPTED',
+        },
+        where: {
+          id: mockEmployeeInvitation.id,
+        },
+      });
     });
   });
 
