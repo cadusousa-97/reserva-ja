@@ -260,10 +260,10 @@ describe('Auth service', () => {
   });
 
   describe('verifyToken', () => {
-    test('Should throw NotFoundException if user not found', () => {
+    test('Should throw NotFoundException if user not found', async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-      expect(
+      await expect(
         service.verifyToken(mockUser.email, mockHashedToken),
       ).rejects.toThrow(NotFoundException);
     });

@@ -3,6 +3,7 @@ import { CompanyService } from './company.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Company } from '@prisma/client';
 import { CompanyType } from './dto/create-company.dto';
+import { NotFoundException } from '@nestjs/common';
 
 describe('CompanyService', () => {
   let service: CompanyService;
@@ -64,30 +65,38 @@ describe('CompanyService', () => {
         mockCompanyData,
       );
     });
+
+    test('Should throw NotFoundException if company not found', async () => {
+      (prisma.company.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.findOne(mockCompanyData.id)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
   });
 
-  test('Should create a company', async () => {
-    (prisma.company.create as jest.Mock).mockResolvedValue(
-      mockCreateCompanyPayload,
-    );
+  describe('createCompany', () => {
+    test('Should create a company', async () => {
+      (prisma.company.create as jest.Mock).mockResolvedValue(
+        mockCreateCompanyPayload,
+      );
 
-    await service.createCompany(mockCreateCompanyPayload);
+      expect(
+        service.createCompany(mockCreateCompanyPayload),
+      ).resolves.toMatchObject(mockCreateCompanyPayload);
 
-    expect(
-      service.createCompany(mockCreateCompanyPayload),
-    ).resolves.toMatchObject(mockCreateCompanyPayload);
-
-    expect(prisma.company.create as jest.Mock).toHaveBeenCalledWith({
-      data: {
-        name: mockCreateCompanyPayload.name,
-        cpfCnpj: mockCreateCompanyPayload.cpfCnpj,
-        companyType: mockCreateCompanyPayload.companyType,
-        addresses: {
-          create: {
-            ...mockCreateCompanyPayload.address,
+      expect(prisma.company.create as jest.Mock).toHaveBeenCalledWith({
+        data: {
+          name: mockCreateCompanyPayload.name,
+          cpfCnpj: mockCreateCompanyPayload.cpfCnpj,
+          companyType: mockCreateCompanyPayload.companyType,
+          addresses: {
+            create: {
+              ...mockCreateCompanyPayload.address,
+            },
           },
         },
-      },
+      });
     });
   });
 });

@@ -13,10 +13,13 @@ import { SignInDto } from './dto/sign-in.dto';
 import { VerifyDto, VerifyResponseDto } from './dto/verify.dto';
 import { VerifyCompanyDto } from './dto/verify-company.dto';
 import { SignUpDto } from './dto/sign-up.dto';
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { JwtPayload } from './interfaces/jwtPayload.interface';
 import { Throttle } from '@nestjs/throttler';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
+import { EmployeeRole } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
@@ -78,6 +81,10 @@ export class AuthController {
 
     return { name: user.name, email: user.email };
   }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(EmployeeRole.OWNER, EmployeeRole.MANAGER)
+  async sendCompanyInvitation() {}
 
   @UseGuards(JwtAuthGuard)
   @Post('signout')

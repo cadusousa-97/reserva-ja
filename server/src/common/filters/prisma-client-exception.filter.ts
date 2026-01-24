@@ -21,7 +21,14 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
       P2002: {
         status: 409,
         message: [`Entrada duplicada para o campo: ${exception.meta?.target}`],
-        error: 'Conflict',
+        error: 'CONFLICT',
+      },
+      P2003: {
+        status: 400,
+        message: [
+          `O valor informado para o campo ${exception.meta?.field_name} não existe`,
+        ],
+        error: 'BAD_REQUEST',
       },
     };
 
