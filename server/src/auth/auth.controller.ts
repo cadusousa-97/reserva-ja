@@ -16,6 +16,7 @@ import { SignUpDto } from './dto/sign-up.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { JwtPayload } from './interfaces/jwtPayload.interface';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -27,6 +28,7 @@ export class AuthController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 1, ttl: 60000 } })
   @Post('signin')
   async signIn(@Body() signInDto: SignInDto) {
     await this.authService.sendToken(signInDto.email);
