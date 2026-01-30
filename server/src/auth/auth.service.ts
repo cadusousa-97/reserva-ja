@@ -1,17 +1,19 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import crypto from 'crypto';
+import crypto, { randomUUID } from 'crypto';
 import * as argon2 from 'argon2';
-import type { Token } from '@prisma/client';
+import type { EmployeeRole, Token } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './interfaces/jwtPayload.interface';
 import { UserPayload } from './interfaces/userPayload.interface';
 import { SignUpDto } from './dto/sign-up.dto';
 import { MailService } from 'src/mail/mail.service';
+import { RegisterEmployeeDto } from './dto/register-employee.dto';
 
 @Injectable({})
 export class AuthService {
@@ -21,9 +23,8 @@ export class AuthService {
     private mailService: MailService,
   ) {}
 
-  async register(signUpDto: SignUpDto) {
+  async registerUser(signUpDto: SignUpDto) {
     const { email, name, phone } = signUpDto;
-    const now = new Date();
 
     let user = await this.prisma.user.findUnique({
       where: {
@@ -41,9 +42,19 @@ export class AuthService {
       });
     }
 
+    return user;
+  }
+
+  async registerEmployee(
+    registerEmployeeDto: RegisterEmployeeDto,
+    token: string,
+  ) {
+    const now = new Date();
+
     const invitation = await this.prisma.employeeInvitation.findFirst({
       where: {
-        email,
+        email: registerEmployeeDto.email,
+        token,
         status: 'PENDING',
         expiresAt: {
           gte: now,
@@ -51,26 +62,33 @@ export class AuthService {
       },
     });
 
-    if (invitation) {
-      await this.prisma.$transaction([
-        this.prisma.employee.create({
-          data: {
-            userId: user.id,
-            companyId: invitation.companyId,
-          },
-        }),
-        this.prisma.employeeInvitation.update({
-          data: {
-            status: 'ACCEPTED',
-          },
-          where: {
-            id: invitation.id,
-          },
-        }),
-      ]);
+    if (!invitation) {
+      throw new NotFoundException('Convite não encontrado ou inválido.');
     }
 
-    await this.sendToken(email);
+    const user = await this.registerUser({
+      email: registerEmployeeDto.email,
+      name: registerEmployeeDto.name,
+      phone: registerEmployeeDto.phone,
+    });
+
+    await this.prisma.$transaction([
+      this.prisma.employee.create({
+        data: {
+          userId: user.id,
+          companyId: invitation.companyId,
+          role: invitation.role,
+        },
+      }),
+      this.prisma.employeeInvitation.update({
+        data: {
+          status: 'ACCEPTED',
+        },
+        where: {
+          id: invitation.id,
+        },
+      }),
+    ]);
   }
 
   async sendToken(email: string) {
@@ -103,7 +121,10 @@ export class AuthService {
     const mail = {
       to: email,
       subject: 'Reserva Já: Código de acesso',
-      text: tokenString,
+      template: 'sendToken',
+      context: {
+        token: tokenString,
+      },
     };
 
     await this.mailService.sendMail(mail);
@@ -214,5 +235,64 @@ export class AuthService {
     };
 
     return { access_token: await this.jwtService.signAsync(payload) };
+  }
+
+  async sendEmployeeInvitation(
+    email: string,
+    companyId: string,
+    role: EmployeeRole | undefined,
+  ) {
+    const employeeInvitationPending =
+      await this.prisma.employeeInvitation.findFirst({
+        where: {
+          email,
+          companyId,
+          status: 'PENDING',
+        },
+      });
+
+    if (employeeInvitationPending) {
+      return new ConflictException('Convite já enviado para este e-mail.');
+    }
+
+    const now = new Date();
+    const expirationDays = 7;
+    const expirationDate = new Date(
+      now.setDate(now.getDate() + expirationDays),
+    );
+
+    const company = await this.prisma.company.findUnique({
+      where: {
+        id: companyId,
+      },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Empresa não encontrada.');
+    }
+
+    const token = randomUUID();
+
+    await this.prisma.employeeInvitation.create({
+      data: {
+        email,
+        companyId,
+        role,
+        expiresAt: expirationDate,
+        token,
+      },
+    });
+
+    const mail = {
+      to: email,
+      subject: 'Reserva Já: Convite para colaborar',
+      template: 'inviteEmployee',
+      context: {
+        companyName: company.name,
+        token: token,
+      },
+    };
+
+    await this.mailService.sendMail(mail);
   }
 }

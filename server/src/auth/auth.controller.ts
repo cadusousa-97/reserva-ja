@@ -4,7 +4,9 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  ParseUUIDPipe,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -20,6 +22,9 @@ import { Throttle } from '@nestjs/throttler';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { EmployeeRole } from '@prisma/client';
+import type { CompanyJwtPayload } from './interfaces/companyJwtPayload.interface';
+import { SendEmployeeInvitationDto } from './dto/send-employee-invitation.dto';
+import { RegisterEmployeeDto } from './dto/register-employee.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -27,7 +32,9 @@ export class AuthController {
 
   @Post('signup')
   async signUp(@Body() signUpDto: SignUpDto) {
-    await this.authService.register(signUpDto);
+    const response = await this.authService.registerUser(signUpDto);
+
+    await this.authService.sendToken(response.email);
   }
 
   @HttpCode(HttpStatus.OK)
@@ -35,6 +42,14 @@ export class AuthController {
   @Post('signin')
   async signIn(@Body() signInDto: SignInDto) {
     await this.authService.sendToken(signInDto.email);
+  }
+
+  @Post('register-employee')
+  async registerEmployee(
+    @Body() registerEmployeeDto: RegisterEmployeeDto,
+    @Query('token', ParseUUIDPipe) token: string,
+  ) {
+    await this.authService.registerEmployee(registerEmployeeDto, token);
   }
 
   @HttpCode(HttpStatus.OK)
@@ -84,7 +99,17 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(EmployeeRole.OWNER, EmployeeRole.MANAGER)
-  async sendCompanyInvitation() {}
+  @Post('send-invitation')
+  async sendEmployeeInvitation(
+    @Body() sendEmployeeInvitation: SendEmployeeInvitationDto,
+    @CurrentUser() user: CompanyJwtPayload,
+  ) {
+    await this.authService.sendEmployeeInvitation(
+      sendEmployeeInvitation.email,
+      user.companyId,
+      user.role,
+    );
+  }
 
   @UseGuards(JwtAuthGuard)
   @Post('signout')

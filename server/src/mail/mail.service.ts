@@ -11,10 +11,8 @@ export class MailService {
       from: process.env.GMAIL_USER,
       to: mailObject.to,
       subject: mailObject.subject,
-      template: 'sendToken',
-      context: {
-        token: mailObject.text,
-      },
+      template: mailObject.template,
+      context: mailObject.context,
     });
   }
 }
