@@ -9,6 +9,8 @@ import { MailModule } from './mail/mail.module';
 import { CompanyModule } from './company/company.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { ServiceModule } from './service/service.module';
+import { AppointmentModule } from './appointment/appointment.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { APP_GUARD } from '@nestjs/core';
         },
       ],
     }),
+    ServiceModule,
+    AppointmentModule,
   ],
   controllers: [AppController],
   providers: [
