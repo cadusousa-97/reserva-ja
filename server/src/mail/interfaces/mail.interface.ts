@@ -1,6 +1,6 @@
-export interface Mail {
+export interface Mail<T = any> {
   to: string;
   subject: string;
   template: string;
-  context: any;
+  context: T;
 }

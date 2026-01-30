@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { NotFoundException, UnauthorizedException } from '@nestjs/common';
-import crypto from 'crypto';
+import crypto, { randomUUID } from 'crypto';
 import * as argon2 from 'argon2';
 import { MailService } from 'src/mail/mail.service';
 import { MailerService } from '@nestjs-modules/mailer';
@@ -23,13 +23,30 @@ describe('Auth service', () => {
     name: 'Carlos',
     email: 'test@email.com',
     phone: '81900000000',
-    createdAt: Date.now(),
+    createdAt: new Date(),
     employeeProfiles: [
       {
         company: {
           id: 'a00ac000-0000-0000-ab1f-111a11b1e111',
           name: 'Barbearia do Zé',
-          createdAt: Date.now(),
+          createdAt: new Date(),
+        },
+      },
+    ],
+  };
+
+  const mockEmployee = {
+    id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
+    name: 'Carlos',
+    email: 'test@email.com',
+    phone: '81900000000',
+    createdAt: new Date(),
+    employeeProfiles: [
+      {
+        company: {
+          id: 'a00ac000-0000-0000-ab1f-111a11b1e111',
+          name: 'Barbearia do Zé',
+          createdAt: new Date(),
         },
       },
     ],
@@ -67,13 +84,16 @@ describe('Auth service', () => {
     id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
     userId: 'a00ac000-0000-0000-ab0f-000a00b0e111',
     token: '1a2b3c4d5e',
-    createdAt: Date.now(),
-    expiresAt: Date.now(),
+    createdAt: new Date(),
+    expiresAt: new Date(),
   };
   const mockMail = {
     to: mockUser.email,
     subject: 'Reserva Já: Código de acesso',
-    text: '111111',
+    template: 'sendToken',
+    context: {
+      token: '111111',
+    },
   };
 
   beforeEach(async () => {
@@ -128,23 +148,7 @@ describe('Auth service', () => {
     (jwt.signAsync as jest.Mock).mockResolvedValue('mock_token');
   });
 
-  describe('register', () => {
-    test('Should call send token service if the user already exists', async () => {
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (prisma.employeeInvitation.findFirst as jest.Mock).mockResolvedValue(
-        mockEmployeeInvitation,
-      );
-
-      const sendTokenSpy = jest
-        .spyOn(service, 'sendToken')
-        .mockResolvedValue(undefined);
-
-      await service.register(mockUser);
-
-      expect(prisma.user.create as jest.Mock).not.toHaveBeenCalled();
-      expect(sendTokenSpy).toHaveBeenCalledWith(mockUser.email);
-    });
-
+  describe('registerUser', () => {
     test('Should create a user if cannot find one', async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
       (prisma.user.create as jest.Mock).mockResolvedValue(mockUser);
@@ -156,7 +160,7 @@ describe('Auth service', () => {
         .spyOn(service, 'sendToken')
         .mockResolvedValue(undefined);
 
-      await service.register(mockUser);
+      await service.registerUser(mockUser);
 
       expect(prisma.user.create as jest.Mock).toHaveBeenCalledWith({
         data: {
@@ -165,36 +169,47 @@ describe('Auth service', () => {
           phone: mockUser.phone,
         },
       });
-      expect(sendTokenSpy).toHaveBeenCalledWith(mockUser.email);
     });
+  });
 
+  describe('registerEmployee', () => {
     test('Should create the employee and update employee invitation status, if it already exists', async () => {
-      (prisma.user.create as jest.Mock).mockResolvedValue(mockUser);
       (prisma.employeeInvitation.findFirst as jest.Mock).mockResolvedValue(
         mockEmployeeInvitation,
       );
 
-      const sendTokenSpy = jest
-        .spyOn(service, 'sendToken')
-        .mockResolvedValue(undefined);
+      const registerUserSpy = jest
+        .spyOn(service, 'registerUser')
+        .mockResolvedValue(mockUser);
 
-      await service.register(mockUser);
-
-      expect(prisma.user.create as jest.Mock).toHaveBeenCalledWith({
-        data: {
-          email: mockUser.email,
-          name: mockUser.name,
-          phone: mockUser.phone,
-        },
+      (prisma.employee.create as jest.Mock).mockResolvedValue({
+        id: 'employee-id',
+        userId: mockUser.id,
+        companyId: mockEmployeeInvitation.companyId,
+        role: mockEmployeeInvitation.role,
       });
 
-      expect(sendTokenSpy).toHaveBeenCalledWith(mockUser.email);
+      (prisma.employeeInvitation.update as jest.Mock).mockResolvedValue(
+        mockEmployeeInvitation,
+      );
+
+      const mockTokenId = randomUUID();
+      await service.registerEmployee(mockEmployee, mockTokenId);
+
+      expect(registerUserSpy).toHaveBeenCalledWith({
+        email: mockEmployee.email,
+        name: mockEmployee.name,
+        phone: mockEmployee.phone,
+      });
+
       expect(prisma.employee.create as jest.Mock).toHaveBeenCalledWith({
         data: {
           userId: mockUser.id,
           companyId: mockEmployeeInvitation.companyId,
+          role: mockEmployeeInvitation.role,
         },
       });
+
       expect(
         prisma.employeeInvitation.update as jest.Mock,
       ).toHaveBeenCalledWith({
@@ -214,8 +229,8 @@ describe('Auth service', () => {
         id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
         userId: 'a00ac000-0000-0000-ab0f-000a00b0e111',
         token: 'some_token',
-        createdAt: Date.now(),
-        expiresAt: Date.now(),
+        createdAt: new Date(),
+        expiresAt: new Date(),
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
@@ -303,7 +318,7 @@ describe('Auth service', () => {
           email: 'test@email.com',
           name: 'Carlos',
           phone: '81988888888',
-          createdAt: Date.now(),
+          createdAt: new Date(),
         },
       };
 

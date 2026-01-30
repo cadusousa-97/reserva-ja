@@ -6,7 +6,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 export class MailService {
   constructor(private readonly mailerService: MailerService) {}
 
-  async sendMail(mailObject: Mail) {
+  async sendMail<T extends Record<string, any> = any>(mailObject: Mail<T>) {
     await this.mailerService.sendMail({
       from: process.env.GMAIL_USER,
       to: mailObject.to,
