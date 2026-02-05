@@ -7,10 +7,7 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 export class ServiceService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createServiceDto: CreateServiceDto) {
-    const { companyId, ...data } = createServiceDto;
-
-    // Verify if company exists
+  async create(createServiceDto: CreateServiceDto, companyId: string) {
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
     });
@@ -21,7 +18,7 @@ export class ServiceService {
 
     return this.prisma.service.create({
       data: {
-        ...data,
+        ...createServiceDto,
         company: {
           connect: { id: companyId },
         },
@@ -29,8 +26,10 @@ export class ServiceService {
     });
   }
 
-  async findAll() {
-    return this.prisma.service.findMany();
+  async findAllByCompany(companyId: string) {
+    return this.prisma.service.findMany({
+      where: { companyId },
+    });
   }
 
   async findOne(id: string) {

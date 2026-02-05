@@ -122,6 +122,9 @@ model Service {
   durationMinutes Int
   company         Company?      @relation(fields: [companyId], references: [id])
   companyId       String?       @db.Uuid
+  priceCents      Int
+  isActive        Boolean       @default(true)
+  discountPercent Int           @default(0)
   appointments    Appointment[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

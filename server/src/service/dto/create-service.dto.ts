@@ -1,4 +1,13 @@
-import { IsInt, IsNotEmpty, IsString, IsUUID, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CreateServiceDto {
   @IsString()
@@ -13,7 +22,17 @@ export class CreateServiceDto {
   @Min(1)
   durationMinutes: number;
 
-  @IsUUID()
-  @IsNotEmpty()
-  companyId: string;
+  @IsInt()
+  @Min(0)
+  priceCents: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  discountPercent?: number;
 }

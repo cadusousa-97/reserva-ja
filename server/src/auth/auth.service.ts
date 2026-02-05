@@ -248,18 +248,15 @@ export class AuthService {
           email,
           companyId,
           status: 'PENDING',
+          expiresAt: {
+            gte: new Date(),
+          },
         },
       });
 
     if (employeeInvitationPending) {
       return new ConflictException('Convite já enviado para este e-mail.');
     }
-
-    const now = new Date();
-    const expirationDays = 7;
-    const expirationDate = new Date(
-      now.setDate(now.getDate() + expirationDays),
-    );
 
     const company = await this.prisma.company.findUnique({
       where: {
@@ -270,6 +267,12 @@ export class AuthService {
     if (!company) {
       throw new NotFoundException('Empresa não encontrada.');
     }
+
+    const now = new Date();
+    const expirationDays = 7;
+    const expirationDate = new Date(
+      now.setDate(now.getDate() + expirationDays),
+    );
 
     const token = randomUUID();
 
