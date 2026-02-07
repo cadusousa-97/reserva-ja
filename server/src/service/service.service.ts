@@ -7,6 +7,38 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 export class ServiceService {
   constructor(private prisma: PrismaService) {}
 
+  async findAllByCompany(companyId: string) {
+    return this.prisma.service.findMany({
+      where: { companyId },
+    });
+  }
+
+  async findOnePublic(id: string) {
+    const service = await this.prisma.service.findUnique({
+      where: { id },
+    });
+
+    if (!service) {
+      throw new NotFoundException('Serviço não encontrado.');
+    }
+
+    return service;
+  }
+
+  async findOne(id: string, companyId: string) {
+    const service = await this.prisma.service.findFirst({
+      where: { id, companyId },
+    });
+
+    if (!service) {
+      throw new NotFoundException(
+        'Serviço não encontrado ou você não tem permissão para editar este serviço.',
+      );
+    }
+
+    return service;
+  }
+
   async create(createServiceDto: CreateServiceDto, companyId: string) {
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
@@ -26,26 +58,12 @@ export class ServiceService {
     });
   }
 
-  async findAllByCompany(companyId: string) {
-    return this.prisma.service.findMany({
-      where: { companyId },
-    });
-  }
-
-  async findOne(id: string) {
-    const service = await this.prisma.service.findUnique({
-      where: { id },
-    });
-
-    if (!service) {
-      throw new NotFoundException('Serviço não encontrado.');
-    }
-
-    return service;
-  }
-
-  async update(id: string, updateServiceDto: UpdateServiceDto) {
-    await this.findOne(id);
+  async update(
+    id: string,
+    updateServiceDto: UpdateServiceDto,
+    companyId: string,
+  ) {
+    await this.findOne(id, companyId);
 
     return this.prisma.service.update({
       where: { id },
@@ -53,8 +71,8 @@ export class ServiceService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, companyId: string) {
+    await this.findOne(id, companyId);
 
     return this.prisma.service.delete({
       where: { id },
