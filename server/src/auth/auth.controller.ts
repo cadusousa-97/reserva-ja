@@ -1,4 +1,4 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import {
   Body,
   Controller,
@@ -7,7 +7,9 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  Req,
   Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -58,16 +60,21 @@ export class AuthController {
     @Body() verifyDto: VerifyDto,
     @Res({ passthrough: true }) res: Response<VerifyResponseDto>,
   ) {
-    const { access_token, userPayload } = await this.authService.verifyToken(
-      verifyDto.email,
-      verifyDto.token,
-    );
+    const { access_token, refresh_token, userPayload } =
+      await this.authService.verifyToken(verifyDto.email, verifyDto.token);
 
     res.cookie('access_token', access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 3600000,
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie('refresh_token', refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
     const response: VerifyResponseDto = userPayload;
@@ -82,16 +89,24 @@ export class AuthController {
     @CurrentUser() user: JwtPayload,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { access_token } = await this.authService.verifyCompany(
-      verifyCompanyDto.companyId,
-      user.sub,
-    );
+    const { access_token, refresh_token } =
+      await this.authService.verifyCompany(
+        verifyCompanyDto.companyId,
+        user.sub,
+      );
 
     res.cookie('access_token', access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 3600000,
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie('refresh_token', refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
     return { name: user.name, email: user.email };
@@ -119,5 +134,66 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
     });
+
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('refresh')
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies['refresh_token'];
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token não encontrado.');
+    }
+
+    const { access_token, refresh_token: newRefreshToken } =
+      await this.authService.refreshAccessToken(refreshToken);
+
+    res.cookie('access_token', access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie('refresh_token', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+
+    return { success: true };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout-all')
+  async logoutAllDevices(
+    @CurrentUser() user: JwtPayload,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.authService.revokeAllUserTokens(user.sub);
+
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+
+    return { message: 'Desconectado de todos os dispositivos.' };
   }
 }

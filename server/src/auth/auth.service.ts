@@ -203,8 +203,11 @@ export class AuthService {
       companies: companiesData,
     };
 
+    const refreshToken = await this.createRefreshToken(user.id);
+
     return {
       access_token: await this.jwtService.signAsync(payload),
+      refresh_token: refreshToken,
       userPayload,
     };
   }
@@ -234,7 +237,16 @@ export class AuthService {
       role: employeeOfThisCompany.role,
     };
 
-    return { access_token: await this.jwtService.signAsync(payload) };
+    const refreshToken = await this.createRefreshToken(
+      employeeOfThisCompany.user!.id,
+      undefined,
+      { companyId, role: employeeOfThisCompany.role },
+    );
+
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+      refresh_token: refreshToken,
+    };
   }
 
   async sendEmployeeInvitation(
@@ -297,5 +309,125 @@ export class AuthService {
     };
 
     await this.mailService.sendMail(mail);
+  }
+
+  async createRefreshToken(
+    userId: string,
+    familyId?: string,
+    employeeContext?: { companyId: string; role: EmployeeRole },
+  ): Promise<string> {
+    const tokenValue = randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    await this.prisma.refreshToken.create({
+      data: {
+        token: tokenValue,
+        userId,
+        familyId: familyId || randomUUID(),
+        companyId: employeeContext?.companyId,
+        role: employeeContext?.role,
+        expiresAt,
+      },
+    });
+
+    return tokenValue;
+  }
+
+  async refreshAccessToken(refreshToken: string) {
+    const storedToken = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+      include: { user: true },
+    });
+
+    if (!storedToken) {
+      throw new UnauthorizedException('Refresh token inválido.');
+    }
+
+    if (storedToken.isRevoked) {
+      throw new UnauthorizedException('Token revogado.');
+    }
+
+    if (storedToken.expiresAt < new Date()) {
+      throw new UnauthorizedException('Refresh token expirado.');
+    }
+
+    if (storedToken.isUsed) {
+      await this.revokeRefreshTokenFamily(storedToken.familyId);
+      throw new UnauthorizedException(
+        'Detectamos uso indevido do token. Todas as sessões foram encerradas.',
+      );
+    }
+
+    await this.prisma.refreshToken.update({
+      where: { id: storedToken.id },
+      data: { isUsed: true },
+    });
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: storedToken.userId },
+      include: {
+        employeeProfiles: {
+          include: { company: true },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    let payload: any;
+
+    if (storedToken.companyId && storedToken.role) {
+      payload = {
+        sub: user.id,
+        name: user.name,
+        email: user.email,
+        companyId: storedToken.companyId,
+        role: storedToken.role,
+      };
+    } else {
+      payload = {
+        sub: user.id,
+        name: user.name,
+        email: user.email,
+      };
+    }
+
+    const newRefreshToken = await this.createRefreshToken(
+      user.id,
+      storedToken.familyId,
+      storedToken.companyId && storedToken.role
+        ? { companyId: storedToken.companyId, role: storedToken.role }
+        : undefined,
+    );
+
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+      refresh_token: newRefreshToken,
+    };
+  }
+
+  async revokeRefreshTokenFamily(familyId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { familyId },
+      data: { isRevoked: true },
+    });
+  }
+
+  async revokeAllUserTokens(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId },
+      data: { isRevoked: true },
+    });
+  }
+
+  async cleanupExpiredTokens(): Promise<void> {
+    await this.prisma.refreshToken.deleteMany({
+      where: {
+        expiresAt: { lt: new Date() },
+      },
+    });
   }
 }

@@ -21,3 +21,5 @@ client/dist/
 client/build/
 
 client/.env.local
+
+.agent/

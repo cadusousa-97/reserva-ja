@@ -44,9 +44,28 @@ model User {
 
   employeeProfiles Employee[]
   customerProfiles Customer[]
+  refreshTokens    RefreshToken[]
 
   createdAt DateTime @default(now())
   tokens    Token[]
+}
+
+model RefreshToken {
+  id        String        @id @default(uuid()) @db.Uuid
+  token     String        @unique @db.VarChar(500)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String        @db.Uuid
+  familyId  String        @db.Uuid
+  companyId String?       @db.Uuid
+  role      EmployeeRole?
+  isRevoked Boolean       @default(false)
+  isUsed    Boolean       @default(false)
+  expiresAt DateTime
+  createdAt DateTime      @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
 }
 
 model Token {
