@@ -8,6 +8,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { PassportModule } from '@nestjs/passport';
 import { MailModule } from 'src/mail/mail.module';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RefreshTokenService } from './refresh-token.service';
 
 @Module({
   imports: [
@@ -22,6 +23,6 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
   ],
   exports: [AuthService, JwtAuthGuard],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  providers: [AuthService, RefreshTokenService, JwtStrategy, JwtAuthGuard],
 })
 export class AuthModule {}

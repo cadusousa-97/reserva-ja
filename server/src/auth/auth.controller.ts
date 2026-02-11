@@ -27,10 +27,14 @@ import { EmployeeRole } from '@prisma/client';
 import type { CompanyJwtPayload } from './interfaces/companyJwtPayload.interface';
 import { SendEmployeeInvitationDto } from './dto/send-employee-invitation.dto';
 import { RegisterEmployeeDto } from './dto/register-employee.dto';
+import { RefreshTokenService } from './refresh-token.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private refreshTokenService: RefreshTokenService,
+  ) {}
 
   @Post('signup')
   async signUp(@Body() signUpDto: SignUpDto) {
@@ -87,8 +91,15 @@ export class AuthController {
   async verifyCompany(
     @Body() verifyCompanyDto: VerifyCompanyDto,
     @CurrentUser() user: JwtPayload,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
+    const oldRefreshToken = req.cookies['refresh_token'];
+
+    if (oldRefreshToken) {
+      await this.refreshTokenService.revoke(oldRefreshToken);
+    }
+
     const { access_token, refresh_token } =
       await this.authService.verifyCompany(
         verifyCompanyDto.companyId,
@@ -155,7 +166,7 @@ export class AuthController {
     }
 
     const { access_token, refresh_token: newRefreshToken } =
-      await this.authService.refreshAccessToken(refreshToken);
+      await this.refreshTokenService.refresh(refreshToken);
 
     res.cookie('access_token', access_token, {
       httpOnly: true,
@@ -180,7 +191,7 @@ export class AuthController {
     @CurrentUser() user: JwtPayload,
     @Res({ passthrough: true }) res: Response,
   ) {
-    await this.authService.revokeAllUserTokens(user.sub);
+    await this.refreshTokenService.revokeAllForUser(user.sub);
 
     res.clearCookie('access_token', {
       httpOnly: true,
