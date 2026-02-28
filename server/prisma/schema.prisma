@@ -36,18 +36,31 @@ enum CompanyType {
   OTHER
 }
 
+enum PlatformRole {
+  USER
+  ADMIN
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
 model User {
-  id    String @id @default(uuid()) @db.Uuid
-  name  String @db.VarChar(100)
-  email String @unique @db.VarChar(150)
-  phone String @db.VarChar(20)
+  id           String       @id @default(uuid()) @db.Uuid
+  name         String       @db.VarChar(100)
+  email        String       @unique @db.VarChar(150)
+  phone        String       @db.VarChar(20)
+  platformRole PlatformRole @default(USER)
 
   employeeProfiles Employee[]
   customerProfiles Customer[]
   refreshTokens    RefreshToken[]
 
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   tokens    Token[]
+  licenses  License[]
 }
 
 model RefreshToken {
@@ -160,6 +173,8 @@ model Company {
   appointments        Appointment[]
   employeeInvitations EmployeeInvitation[]
   addresses           Address[]
+  license             License?             @relation(fields: [licenseId], references: [id])
+  licenseId           String?              @db.Uuid
 
   createdAt DateTime @default(now())
 }
@@ -175,4 +190,31 @@ model Address {
   zipCode    String  @db.VarChar(8)
   complement String?
   landmark   String?
+}
+
+model Plan {
+  id                     String    @id @default(uuid()) @db.Uuid
+  name                   String    @db.VarChar(100)
+  maxCompanies           Int       @default(1)
+  maxEmployeesPerCompany Int       @default(5)
+  maxServicesPerCompany  Int       @default(20)
+  priceCents             Int
+  isActive               Boolean   @default(true)
+  licenses               License[]
+  createdAt              DateTime  @default(now())
+}
+
+model License {
+  id          String        @id @default(uuid()) @db.Uuid
+  key         String        @unique @db.VarChar(50)
+  plan        Plan          @relation(fields: [planId], references: [id])
+  planId      String        @db.Uuid
+  status      LicenseStatus @default(ACTIVE)
+  ownerEmail  String?       @db.VarChar(150)
+  ownerUser   User?         @relation(fields: [ownerUserId], references: [id])
+  ownerUserId String?       @db.Uuid
+  activatedAt DateTime?
+  expiresAt   DateTime
+  companies   Company[]
+  createdAt   DateTime      @default(now())
 }
