@@ -14,6 +14,7 @@ describe('CompanyService', () => {
     id: '38f5283e-b519-448d-b724-5f013f1e0a77',
     cpfCnpj: '11122233344',
     companyType: 'BARBERSHOP',
+    licenseId: null,
     createdAt: new Date(),
   };
   const mockCreateCompanyPayload = {
