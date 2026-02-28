@@ -7,7 +7,8 @@ import crypto, { randomUUID } from 'crypto';
 import * as argon2 from 'argon2';
 import { MailService } from 'src/mail/mail.service';
 import { MailerService } from '@nestjs-modules/mailer';
-import { EmployeeInvitation } from '@prisma/client';
+import { EmployeeInvitation, PlatformRole } from '@prisma/client';
+import { RefreshTokenService } from './refresh-token.service';
 
 jest.mock('argon2');
 
@@ -17,12 +18,15 @@ describe('Auth service', () => {
   let jwt: JwtService;
   let mail: MailService;
 
+  // (skipping mocks for brevity...)
+
   const mockHashedToken = 'some_hashed_token';
   const mockUser = {
     id: 'a00ac000-0000-0000-ab0f-000a00b0e000',
     name: 'Carlos',
     email: 'test@email.com',
     phone: '81900000000',
+    platformRole: PlatformRole.USER,
     createdAt: new Date(),
     employeeProfiles: [
       {
@@ -40,6 +44,7 @@ describe('Auth service', () => {
     name: 'Carlos',
     email: 'test@email.com',
     phone: '81900000000',
+    platformRole: PlatformRole.USER,
     createdAt: new Date(),
     employeeProfiles: [
       {
@@ -134,6 +139,12 @@ describe('Auth service', () => {
           provide: JwtService,
           useValue: {
             signAsync: jest.fn(),
+          },
+        },
+        {
+          provide: RefreshTokenService,
+          useValue: {
+            create: jest.fn(),
           },
         },
       ],

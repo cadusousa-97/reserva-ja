@@ -14,7 +14,6 @@ import { UserPayload } from './interfaces/userPayload.interface';
 import { SignUpDto } from './dto/sign-up.dto';
 import { MailService } from 'src/mail/mail.service';
 import { RegisterEmployeeDto } from './dto/register-employee.dto';
-import { CompanyJwtPayload } from './interfaces/companyJwtPayload.interface';
 import { RefreshTokenService } from './refresh-token.service';
 
 @Injectable({})
@@ -196,6 +195,7 @@ export class AuthService {
       sub: user.id,
       name: user.name,
       email: user.email,
+      platformRole: user.platformRole,
     };
 
     const userPayload: UserPayload = {
