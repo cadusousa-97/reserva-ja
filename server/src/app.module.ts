@@ -13,6 +13,7 @@ import { ServiceModule } from './service/service.module';
 import { AppointmentModule } from './appointment/appointment.module';
 import { LicenseModule } from './license/license.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
+import { ScheduleModule } from './schedule/schedule.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
     AppointmentModule,
     LicenseModule,
     OnboardingModule,
+    ScheduleModule,
   ],
   controllers: [AppController],
   providers: [
