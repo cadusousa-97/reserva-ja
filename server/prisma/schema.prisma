@@ -47,6 +47,11 @@ enum LicenseStatus {
   REVOKED
 }
 
+enum ScheduleType {
+  FLOATING
+  FIXED
+}
+
 model User {
   id           String       @id @default(uuid()) @db.Uuid
   name         String       @db.VarChar(100)
@@ -91,13 +96,15 @@ model Token {
 }
 
 model Employee {
-  id           String        @id @default(uuid()) @db.Uuid
-  user         User          @relation(fields: [userId], references: [id])
-  userId       String        @db.Uuid
-  company      Company       @relation(fields: [companyId], references: [id])
-  companyId    String        @db.Uuid
-  role         EmployeeRole  @default(REGULAR)
-  appointments Appointment[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  user               User                @relation(fields: [userId], references: [id])
+  userId             String              @db.Uuid
+  company            Company             @relation(fields: [companyId], references: [id])
+  companyId          String              @db.Uuid
+  role               EmployeeRole        @default(REGULAR)
+  appointments       Appointment[]
+  weeklySchedules    WeeklySchedule[]
+  scheduleExceptions ScheduleException[]
 
   @@unique([userId, companyId])
 }
@@ -173,6 +180,9 @@ model Company {
   appointments        Appointment[]
   employeeInvitations EmployeeInvitation[]
   addresses           Address[]
+  weeklySchedules     WeeklySchedule[]
+  scheduleExceptions  ScheduleException[]
+  scheduleType        ScheduleType         @default(FLOATING)
   license             License?             @relation(fields: [licenseId], references: [id])
   licenseId           String?              @db.Uuid
 
@@ -217,4 +227,30 @@ model License {
   expiresAt   DateTime
   companies   Company[]
   createdAt   DateTime      @default(now())
+}
+
+model WeeklySchedule {
+  id         String   @id @default(uuid()) @db.Uuid
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String   @db.Uuid
+  company    Company  @relation(fields: [companyId], references: [id])
+  companyId  String   @db.Uuid
+  dayOfWeek  Int
+  startTime  String   @db.VarChar(5)
+  endTime    String   @db.VarChar(5)
+
+  @@unique([employeeId, dayOfWeek, startTime])
+}
+
+model ScheduleException {
+  id         String   @id @default(uuid()) @db.Uuid
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String   @db.Uuid
+  company    Company  @relation(fields: [companyId], references: [id])
+  companyId  String   @db.Uuid
+  date       DateTime @db.Date
+  isClosed   Boolean  @default(false)
+  startTime  String?  @db.VarChar(5)
+  endTime    String?  @db.VarChar(5)
+  reason     String?  @db.VarChar(200)
 }
