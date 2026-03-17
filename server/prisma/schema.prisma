@@ -151,7 +151,7 @@ model Appointment {
   appointmentDate DateTime
 
   createdAt DateTime @default(now())
-  UpdatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 }
 
 model Service {
