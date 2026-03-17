@@ -26,7 +26,7 @@ export class ScheduleController {
 
   @Put('weekly')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(EmployeeRole.OWNER, EmployeeRole.MANAGER)
+  @Roles(EmployeeRole.OWNER, EmployeeRole.MANAGER, EmployeeRole.REGULAR)
   setWeeklySchedule(
     @Body() dto: SetWeeklyScheduleDto,
     @CurrentUser() user: CompanyJwtPayload,
