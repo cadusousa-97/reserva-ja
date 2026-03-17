@@ -4,6 +4,7 @@ import { jwtConstants } from './constants';
 import { Request } from 'express';
 import { Injectable } from '@nestjs/common';
 import { JwtPayload } from './interfaces/jwtPayload.interface';
+import type { CompanyJwtPayload } from './interfaces/companyJwtPayload.interface';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -18,12 +19,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<JwtPayload> {
-    return {
-      sub: payload.sub,
-      name: payload.name,
-      email: payload.email,
-      platformRole: payload.platformRole,
-    };
+  async validate(
+    payload: JwtPayload | CompanyJwtPayload,
+  ): Promise<JwtPayload | CompanyJwtPayload> {
+    // Preserve additional claims (e.g. companyId/role) for company-scoped endpoints.
+    return payload;
   }
 }
