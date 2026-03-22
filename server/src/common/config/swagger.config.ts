@@ -3,8 +3,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { OpenAPIObject } from '@nestjs/swagger';
 
 const SWAGGER_PATH = 'docs';
+type SwaggerDocumentConfig = Omit<OpenAPIObject, 'paths'>;
 
-export function buildSwaggerConfig() {
+export function buildSwaggerConfig(): SwaggerDocumentConfig {
   return new DocumentBuilder()
     .setTitle('Reserva Ja API')
     .setDescription('Documentacao da API Reserva Ja')
@@ -24,7 +25,7 @@ export function buildSwaggerConfig() {
 }
 
 export function setupSwagger(app: INestApplication) {
-  const config = buildSwaggerConfig();
+  const config: SwaggerDocumentConfig = buildSwaggerConfig();
   const document: OpenAPIObject = SwaggerModule.createDocument(app, config);
 
   SwaggerModule.setup(SWAGGER_PATH, app, document, {
