@@ -1,6 +1,6 @@
 ---
 name: reserva-ja-workspace
-description: Workspace rules + mentorship guidelines for the Reserva Ja scheduling SaaS (Next.js/React, NestJS, Prisma/Postgres, Jest, AWS). Use when reviewing or changing code in this repo and you should prioritize teaching, TypeScript best practices, clean architecture, RESTful API design, validation/DTO conventions, Prisma schema/query guidance, testing strategy, performance awareness, and security mindset.
+description: Workspace rules + mentorship guidelines for the Reserva Ja scheduling SaaS (Next.js/React, NestJS, Prisma/Postgres, Jest, AWS). Use when reviewing or changing code in this repo and prioritize teaching, TypeScript best practices, clean architecture, RESTful API design, validation/DTO conventions, Prisma schema/query guidance, testing strategy, performance awareness, and security mindset.
 ---
 
 # Reserva Ja Workspace
@@ -54,6 +54,15 @@ Use this skill to keep assistance consistent across Reserva Ja: explain the "why
 - Prefer tests around business logic and critical flows (appointments, availability, auth).
 - Favor unit tests for pure rules and integration tests for Prisma/service boundaries when valuable.
 - Keep tests deterministic: control time, random values, and external side effects.
+
+## Commit Guidelines
+
+- Always use standard commit prefixes (`feat:`, `fix:`, `chore:`, etc.).
+- Review and split commits by relevant modifications.
+- Keep commit titles at 80 characters maximum.
+- Never begin the commit process before:
+  - verifying code/tests for the intended scope, and
+  - receiving explicit user permission to commit.
 
 ## Review Checklist (Quick)
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reserva Ja Workspace"
+  short_description: "Repository-specific engineering guidance for Reserva Ja."
+  default_prompt: "Use this skill when changing or reviewing code in the Reserva Ja repository."

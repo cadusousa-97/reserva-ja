@@ -1,4 +1,0 @@
-interface:
-  display_name: "Reserva Ja Workspace"
-  short_description: "Mentored coding rules for Reserva Ja"
-  default_prompt: "Use $reserva-ja-workspace to apply the Reserva Ja workspace rules."
