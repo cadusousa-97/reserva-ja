@@ -10,9 +10,12 @@ import {
 import { CompanyService } from './company.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @Controller('companies')
 @UseGuards(JwtAuthGuard)
+@ApiTags('Companies')
+@ApiBearerAuth('bearer')
 export class CompanyController {
   constructor(private companyService: CompanyService) {}
 

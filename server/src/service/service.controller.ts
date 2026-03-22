@@ -18,7 +18,10 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import type { CompanyJwtPayload } from 'src/auth/interfaces/companyJwtPayload.interface';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 @Controller('service')
+@ApiTags('Services')
+@ApiBearerAuth('bearer')
 export class ServiceController {
   constructor(private readonly serviceService: ServiceService) {}
 

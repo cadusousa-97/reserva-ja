@@ -13,10 +13,13 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PlatformRolesGuard } from '../auth/guards/platform-roles.guard';
 import { PlatformRoles } from '../auth/decorators/platform-roles.decorator';
 import { PlatformRole } from '@prisma/client';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @Controller('admin/licenses')
 @UseGuards(JwtAuthGuard, PlatformRolesGuard)
 @PlatformRoles(PlatformRole.ADMIN)
+@ApiTags('Licenses')
+@ApiBearerAuth('bearer')
 export class LicenseController {
   constructor(private readonly licenseService: LicenseService) {}
 

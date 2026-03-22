@@ -15,8 +15,11 @@ import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwtPayload.interface';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @Controller('appointment')
+@ApiTags('Appointments')
+@ApiBearerAuth('bearer')
 export class AppointmentController {
   constructor(private readonly appointmentService: AppointmentService) {}
 

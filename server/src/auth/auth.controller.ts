@@ -28,8 +28,11 @@ import type { CompanyJwtPayload } from './interfaces/companyJwtPayload.interface
 import { SendEmployeeInvitationDto } from './dto/send-employee-invitation.dto';
 import { RegisterEmployeeDto } from './dto/register-employee.dto';
 import { RefreshTokenService } from './refresh-token.service';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @Controller('auth')
+@ApiTags('Auth')
+@ApiBearerAuth('bearer')
 export class AuthController {
   constructor(
     private authService: AuthService,

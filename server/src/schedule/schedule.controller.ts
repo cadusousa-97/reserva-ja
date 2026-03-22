@@ -19,8 +19,11 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { CompanyJwtPayload } from '../auth/interfaces/companyJwtPayload.interface';
 import { EmployeeRole } from '@prisma/client';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @Controller('schedule')
+@ApiTags('Schedule')
+@ApiBearerAuth('bearer')
 export class ScheduleController {
   constructor(private readonly scheduleService: ScheduleService) {}
 
