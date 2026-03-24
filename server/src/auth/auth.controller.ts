@@ -177,7 +177,9 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const oldRefreshToken = req.cookies['refresh_token'];
+    const oldRefreshToken = (req.cookies as Record<string, string | undefined>)[
+      'refresh_token'
+    ];
 
     if (oldRefreshToken) {
       await this.refreshTokenService.revoke(oldRefreshToken);
@@ -243,7 +245,7 @@ export class AuthController {
   })
   @UseGuards(JwtAuthGuard)
   @Post('signout')
-  async signOut(@Res({ passthrough: true }) res: Response) {
+  signOut(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -275,7 +277,9 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refreshToken = req.cookies['refresh_token'];
+    const refreshToken = (req.cookies as Record<string, string | undefined>)[
+      'refresh_token'
+    ];
 
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token não encontrado.');

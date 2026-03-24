@@ -70,6 +70,7 @@ export class AppointmentService {
   }
 
   update(id: string, updateAppointmentDto: UpdateAppointmentDto) {
+    void updateAppointmentDto;
     return `This action updates a #${id} appointment`;
   }
 

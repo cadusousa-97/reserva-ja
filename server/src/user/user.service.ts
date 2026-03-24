@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 
-export type User = any;
+export type User = Record<string, unknown>;
 
 @Injectable({})
 export class UsersService {
-  async findOne(username: string): Promise<User | undefined> {}
+  findOne(username: string): User | undefined {
+    void username;
+    return undefined;
+  }
 }

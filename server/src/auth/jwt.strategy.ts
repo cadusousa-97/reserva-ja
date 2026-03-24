@@ -12,16 +12,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       secretOrKey: jwtConstants.secret,
       jwtFromRequest: ExtractJwt.fromExtractors([
-        (request: Request) => {
-          return request?.cookies?.access_token;
+        (request: Request): string | null => {
+          return (request?.cookies?.access_token as string | undefined) ?? null;
         },
       ]),
     });
   }
 
-  async validate(
+  validate(
     payload: JwtPayload | CompanyJwtPayload,
-  ): Promise<JwtPayload | CompanyJwtPayload> {
+  ): JwtPayload | CompanyJwtPayload {
     // Preserve additional claims (e.g. companyId/role) for company-scoped endpoints.
     return payload;
   }

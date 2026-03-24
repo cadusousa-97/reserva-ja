@@ -2,6 +2,13 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PLATFORM_ROLES_KEY } from '../decorators/platform-roles.decorator';
 import { PlatformRole } from '@prisma/client';
+import type { Request } from 'express';
+
+type PlatformRolesRequest = Request & {
+  user?: {
+    platformRole?: PlatformRole;
+  };
+};
 
 @Injectable()
 export class PlatformRolesGuard implements CanActivate {
@@ -15,8 +22,9 @@ export class PlatformRolesGuard implements CanActivate {
 
     if (!requiredRoles) return true;
 
-    const { user } = context.switchToHttp().getRequest();
+    const { user } = context.switchToHttp().getRequest<PlatformRolesRequest>();
+    const userPlatformRole = user?.platformRole;
 
-    return requiredRoles.some((role) => role === user.platformRole);
+    return requiredRoles.some((role) => role === userPlatformRole);
   }
 }
