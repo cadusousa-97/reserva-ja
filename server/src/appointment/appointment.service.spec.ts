@@ -81,16 +81,18 @@ describe('AppointmentService', () => {
         {
           provide: PrismaService,
           useValue: {
-            $transaction: jest.fn().mockImplementation((cb: any, _opts: any) => {
-              return cb(tx);
-            }),
+            $transaction: jest
+              .fn()
+              .mockImplementation((cb: any, _opts: any) => {
+                return cb(tx);
+              }),
           },
         },
       ],
     }).compile();
 
     service = module.get<AppointmentService>(AppointmentService);
-    prisma = module.get(PrismaService) as any;
+    prisma = module.get(PrismaService);
   });
 
   it('should be defined', () => {
@@ -114,7 +116,7 @@ describe('AppointmentService', () => {
     );
 
     // Validate the create payload in a way that survives refactors.
-    const txUsed = (prisma.$transaction.mock.calls[0][0] as any) as Function;
+    const txUsed = prisma.$transaction.mock.calls[0][0] as Function;
     expect(typeof txUsed).toBe('function');
 
     // Ensure the transaction created the appointment.
@@ -146,9 +148,7 @@ describe('AppointmentService', () => {
       },
     });
 
-    (prisma.$transaction as jest.Mock).mockImplementationOnce(
-      (cb: any, _opts: any) => cb(tx),
-    );
+    prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
     const result = await service.create(dto as any, userId);
     expect(tx.customer.create).toHaveBeenCalledWith({
@@ -167,21 +167,16 @@ describe('AppointmentService', () => {
 
     const tx = makeTx({
       customer: {
-        findFirst: jest
-          .fn()
-          .mockResolvedValueOnce(null)
-          .mockResolvedValueOnce({
-            id: customerId,
-            userId,
-            companyId,
-          }),
+        findFirst: jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({
+          id: customerId,
+          userId,
+          companyId,
+        }),
         create: jest.fn().mockRejectedValueOnce(makePckre('P2002')),
       },
     });
 
-    (prisma.$transaction as jest.Mock).mockImplementationOnce(
-      (cb: any, _opts: any) => cb(tx),
-    );
+    prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
     const result = await service.create(dto as any, userId);
     expect(tx.customer.create).toHaveBeenCalled();
@@ -201,9 +196,7 @@ describe('AppointmentService', () => {
         findUnique: jest.fn().mockResolvedValue(null),
       },
     });
-    (prisma.$transaction as jest.Mock).mockImplementationOnce(
-      (cb: any, _opts: any) => cb(tx),
-    );
+    prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
     await expect(service.create(dto as any, userId)).rejects.toThrow(
       NotFoundException,
@@ -227,9 +220,7 @@ describe('AppointmentService', () => {
         }),
       },
     });
-    (prisma.$transaction as jest.Mock).mockImplementationOnce(
-      (cb: any, _opts: any) => cb(tx),
-    );
+    prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
     await expect(service.create(dto as any, userId)).rejects.toThrow(
       NotFoundException,
@@ -248,9 +239,7 @@ describe('AppointmentService', () => {
         findUnique: jest.fn().mockResolvedValue(null),
       },
     });
-    (prisma.$transaction as jest.Mock).mockImplementationOnce(
-      (cb: any, _opts: any) => cb(tx),
-    );
+    prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
     await expect(service.create(dto as any, userId)).rejects.toThrow(
       NotFoundException,
@@ -272,9 +261,7 @@ describe('AppointmentService', () => {
         }),
       },
     });
-    (prisma.$transaction as jest.Mock).mockImplementationOnce(
-      (cb: any, _opts: any) => cb(tx),
-    );
+    prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
     await expect(service.create(dto as any, userId)).rejects.toThrow(
       ConflictException,
@@ -320,9 +307,7 @@ describe('AppointmentService', () => {
       },
     });
 
-    (prisma.$transaction as jest.Mock).mockImplementationOnce(
-      (cb: any, _opts: any) => cb(tx),
-    );
+    prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
     await expect(service.create(dto as any, userId)).rejects.toThrow(
       ConflictException,
@@ -339,7 +324,7 @@ describe('AppointmentService', () => {
 
     const tx = makeTx();
 
-    (prisma.$transaction as jest.Mock)
+    prisma.$transaction
       .mockRejectedValueOnce(makePckre('P2034'))
       .mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
@@ -349,4 +334,3 @@ describe('AppointmentService', () => {
     expect(result).toMatchObject({ status: 'SCHEDULED' });
   });
 });
-

@@ -4,6 +4,6 @@ import { LicenseController } from './license.controller';
 
 @Module({
   providers: [LicenseService],
-  controllers: [LicenseController]
+  controllers: [LicenseController],
 })
 export class LicenseModule {}

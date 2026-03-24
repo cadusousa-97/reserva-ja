@@ -11,7 +11,7 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
 
     interface ResponseData {
       status: number;
-      message: Array<String>;
+      message: Array<string>;
       error: string;
     }
 

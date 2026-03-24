@@ -241,7 +241,7 @@ export class AuthService {
     };
 
     const refreshToken = await this.refreshTokenService.create(
-      employeeOfThisCompany.user!.id,
+      employeeOfThisCompany.user.id,
       undefined,
       { companyId, role: employeeOfThisCompany.role },
     );

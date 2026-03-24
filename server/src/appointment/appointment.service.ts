@@ -17,7 +17,7 @@ type ExistingAppointment = {
 
 @Injectable()
 export class AppointmentService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateAppointmentDto, userId: string) {
     return this.withSerializableRetry(() =>
@@ -32,7 +32,11 @@ export class AppointmentService {
           );
 
           const companyId = employee.companyId;
-          const customer = await this.getOrCreateCustomer(tx, userId, companyId);
+          const customer = await this.getOrCreateCustomer(
+            tx,
+            userId,
+            companyId,
+          );
 
           const start = this.parseAppointmentDateOrThrow(dto.appointmentDate);
           const end = this.computeEndDate(start, service.durationMinutes);
@@ -115,7 +119,9 @@ export class AppointmentService {
     tx: Prisma.TransactionClient,
     employeeId: string,
   ) {
-    const employee = await tx.employee.findUnique({ where: { id: employeeId } });
+    const employee = await tx.employee.findUnique({
+      where: { id: employeeId },
+    });
 
     if (!employee) {
       throw new NotFoundException('Funcionário não encontrado.');
@@ -140,7 +146,9 @@ export class AppointmentService {
     userId: string,
     companyId: string,
   ) {
-    const existing = await tx.customer.findFirst({ where: { userId, companyId } });
+    const existing = await tx.customer.findFirst({
+      where: { userId, companyId },
+    });
     if (existing) return existing;
 
     try {
@@ -148,8 +156,13 @@ export class AppointmentService {
     } catch (err) {
       // If two requests race to create the same customer profile, rely on the unique constraint
       // and re-fetch.
-      if (err instanceof PrismaClientKnownRequestError && err.code === 'P2002') {
-        const fetched = await tx.customer.findFirst({ where: { userId, companyId } });
+      if (
+        err instanceof PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        const fetched = await tx.customer.findFirst({
+          where: { userId, companyId },
+        });
         if (fetched) return fetched;
       }
       throw err;
@@ -237,7 +250,9 @@ export class AppointmentService {
     });
 
     if (this.hasAnyOverlap(existing, { start, end })) {
-      throw new ConflictException('Horario indisponivel para este funcionario.');
+      throw new ConflictException(
+        'Horario indisponivel para este funcionario.',
+      );
     }
   }
 
@@ -267,4 +282,3 @@ export class AppointmentService {
     });
   }
 }
-
