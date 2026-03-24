@@ -28,7 +28,22 @@ import type { CompanyJwtPayload } from './interfaces/companyJwtPayload.interface
 import { SendEmployeeInvitationDto } from './dto/send-employee-invitation.dto';
 import { RegisterEmployeeDto } from './dto/register-employee.dto';
 import { RefreshTokenService } from './refresh-token.service';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import {
+  ApiBooleanSuccessResponseDto,
+  ApiErrorResponseDto,
+  ApiMessageResponseDto,
+} from '../common/swagger/dto/api-response.dto';
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -39,6 +54,15 @@ export class AuthController {
     private refreshTokenService: RefreshTokenService,
   ) {}
 
+  @ApiOperation({ summary: 'Cria uma nova conta e envia token de verificacao' })
+  @ApiBody({ type: SignUpDto })
+  @ApiCreatedResponse({
+    description: 'Conta criada e token enviado por e-mail.',
+  })
+  @ApiBadRequestResponse({
+    description: 'Erro de validacao dos dados enviados.',
+    type: ApiErrorResponseDto,
+  })
   @Post('signup')
   async signUp(@Body() signUpDto: SignUpDto) {
     const response = await this.authService.registerUser(signUpDto);
@@ -46,6 +70,15 @@ export class AuthController {
     await this.authService.sendToken(response.email);
   }
 
+  @ApiOperation({ summary: 'Solicita token de login por e-mail' })
+  @ApiBody({ type: SignInDto })
+  @ApiOkResponse({
+    description: 'Token enviado por e-mail.',
+  })
+  @ApiBadRequestResponse({
+    description: 'Erro de validacao do e-mail.',
+    type: ApiErrorResponseDto,
+  })
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 1, ttl: 60000 } })
   @Post('signin')
@@ -53,6 +86,21 @@ export class AuthController {
     await this.authService.sendToken(signInDto.email);
   }
 
+  @ApiOperation({ summary: 'Registra colaborador com token de convite' })
+  @ApiBody({ type: RegisterEmployeeDto })
+  @ApiQuery({
+    name: 'token',
+    required: true,
+    description: 'Token UUID de convite para cadastro do colaborador',
+    example: '6a03bc6c-d2f5-4e2b-85f4-767fdd53a5cd',
+  })
+  @ApiCreatedResponse({
+    description: 'Colaborador registrado com sucesso.',
+  })
+  @ApiBadRequestResponse({
+    description: 'Token invalido ou dados de cadastro incorretos.',
+    type: ApiErrorResponseDto,
+  })
   @Post('register-employee')
   async registerEmployee(
     @Body() registerEmployeeDto: RegisterEmployeeDto,
@@ -61,6 +109,16 @@ export class AuthController {
     await this.authService.registerEmployee(registerEmployeeDto, token);
   }
 
+  @ApiOperation({ summary: 'Valida token de login e retorna perfil do usuario' })
+  @ApiBody({ type: VerifyDto })
+  @ApiOkResponse({
+    description: 'Token validado; cookies de acesso e refresh definidos.',
+    type: VerifyResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Token invalido, expirado ou payload incorreto.',
+    type: ApiErrorResponseDto,
+  })
   @HttpCode(HttpStatus.OK)
   @Post('verify')
   async verify(
@@ -89,6 +147,24 @@ export class AuthController {
     return response;
   }
 
+  @ApiOperation({ summary: 'Seleciona empresa ativa para o usuario autenticado' })
+  @ApiCreatedResponse({
+    description: 'Empresa selecionada e novos cookies emitidos.',
+    schema: {
+      example: {
+        name: 'Ana Silva',
+        email: 'ana@empresa.com',
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Empresa invalida para o usuario.',
+    type: ApiErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Usuario nao autenticado.',
+    type: ApiErrorResponseDto,
+  })
   @UseGuards(JwtAuthGuard)
   @Post('select-company')
   async verifyCompany(
@@ -126,6 +202,19 @@ export class AuthController {
     return { name: user.name, email: user.email };
   }
 
+  @ApiOperation({ summary: 'Envia convite de colaborador para uma empresa' })
+  @ApiBody({ type: SendEmployeeInvitationDto })
+  @ApiCreatedResponse({
+    description: 'Convite enviado com sucesso.',
+  })
+  @ApiBadRequestResponse({
+    description: 'E-mail invalido ou dados incorretos.',
+    type: ApiErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Usuario sem permissao/autenticacao para enviar convite.',
+    type: ApiErrorResponseDto,
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(EmployeeRole.OWNER, EmployeeRole.MANAGER)
   @Post('send-invitation')
@@ -140,6 +229,14 @@ export class AuthController {
     );
   }
 
+  @ApiOperation({ summary: 'Encerra sessao no dispositivo atual' })
+  @ApiCreatedResponse({
+    description: 'Cookies de autenticacao removidos.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Usuario nao autenticado.',
+    type: ApiErrorResponseDto,
+  })
   @UseGuards(JwtAuthGuard)
   @Post('signout')
   async signOut(@Res({ passthrough: true }) res: Response) {
@@ -156,6 +253,16 @@ export class AuthController {
     });
   }
 
+  @ApiOperation({ summary: 'Renova tokens a partir do refresh token em cookie' })
+  @ApiOkResponse({
+    description: 'Tokens renovados com sucesso.',
+    type: ApiBooleanSuccessResponseDto,
+    schema: { example: { success: true } },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Refresh token ausente, invalido ou revogado.',
+    type: ApiErrorResponseDto,
+  })
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   async refresh(
@@ -188,6 +295,18 @@ export class AuthController {
     return { success: true };
   }
 
+  @ApiOperation({ summary: 'Encerra sessao em todos os dispositivos do usuario' })
+  @ApiCreatedResponse({
+    description: 'Todos os refresh tokens do usuario foram revogados.',
+    type: ApiMessageResponseDto,
+    schema: {
+      example: { message: 'Desconectado de todos os dispositivos.' },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Usuario nao autenticado.',
+    type: ApiErrorResponseDto,
+  })
   @UseGuards(JwtAuthGuard)
   @Post('logout-all')
   async logoutAllDevices(
