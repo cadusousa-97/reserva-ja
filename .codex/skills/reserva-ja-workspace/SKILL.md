@@ -60,6 +60,7 @@ Use this skill to keep assistance consistent across Reserva Ja: explain the "why
 - Always use standard commit prefixes (`feat:`, `fix:`, `chore:`, etc.).
 - Review and split commits by relevant modifications.
 - Keep commit titles at 80 characters maximum.
+- Before any commit, run the full lint suite of the application.
 - Before any commit, run the full application test suite (currently backend only).
 - Never begin the commit process before:
   - verifying code/tests for the intended scope, and
