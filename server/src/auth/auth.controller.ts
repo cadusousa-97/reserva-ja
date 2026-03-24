@@ -109,7 +109,9 @@ export class AuthController {
     await this.authService.registerEmployee(registerEmployeeDto, token);
   }
 
-  @ApiOperation({ summary: 'Valida token de login e retorna perfil do usuario' })
+  @ApiOperation({
+    summary: 'Valida token de login e retorna perfil do usuario',
+  })
   @ApiBody({ type: VerifyDto })
   @ApiOkResponse({
     description: 'Token validado; cookies de acesso e refresh definidos.',
@@ -147,7 +149,9 @@ export class AuthController {
     return response;
   }
 
-  @ApiOperation({ summary: 'Seleciona empresa ativa para o usuario autenticado' })
+  @ApiOperation({
+    summary: 'Seleciona empresa ativa para o usuario autenticado',
+  })
   @ApiCreatedResponse({
     description: 'Empresa selecionada e novos cookies emitidos.',
     schema: {
@@ -253,7 +257,9 @@ export class AuthController {
     });
   }
 
-  @ApiOperation({ summary: 'Renova tokens a partir do refresh token em cookie' })
+  @ApiOperation({
+    summary: 'Renova tokens a partir do refresh token em cookie',
+  })
   @ApiOkResponse({
     description: 'Tokens renovados com sucesso.',
     type: ApiBooleanSuccessResponseDto,
@@ -295,7 +301,9 @@ export class AuthController {
     return { success: true };
   }
 
-  @ApiOperation({ summary: 'Encerra sessao em todos os dispositivos do usuario' })
+  @ApiOperation({
+    summary: 'Encerra sessao em todos os dispositivos do usuario',
+  })
   @ApiCreatedResponse({
     description: 'Todos os refresh tokens do usuario foram revogados.',
     type: ApiMessageResponseDto,

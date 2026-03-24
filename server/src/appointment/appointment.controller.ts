@@ -54,7 +54,9 @@ export class AppointmentController {
   }
 
   @ApiOperation({ summary: 'Lista todos os agendamentos' })
-  @ApiOkResponse({ description: 'Lista de agendamentos retornada com sucesso.' })
+  @ApiOkResponse({
+    description: 'Lista de agendamentos retornada com sucesso.',
+  })
   @Get()
   findAll() {
     return this.appointmentService.findAll();

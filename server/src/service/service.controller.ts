@@ -88,7 +88,9 @@ export class ServiceController {
     return this.serviceService.create(createServiceDto, user.companyId);
   }
 
-  @ApiOperation({ summary: 'Atualiza um servico existente da empresa autenticada' })
+  @ApiOperation({
+    summary: 'Atualiza um servico existente da empresa autenticada',
+  })
   @ApiParam({
     name: 'id',
     description: 'ID UUID do servico',
