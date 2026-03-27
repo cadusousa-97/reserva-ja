@@ -8,6 +8,8 @@ import {
   Delete,
   UseGuards,
   ParseUUIDPipe,
+  Headers,
+  BadRequestException,
 } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
@@ -24,6 +26,8 @@ import {
   ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
+  ApiHeader,
+  ApiConflictResponse,
 } from '@nestjs/swagger';
 import { ApiErrorResponseDto } from '../common/swagger/dto/api-response.dto';
 
@@ -35,9 +39,19 @@ export class AppointmentController {
 
   @ApiOperation({ summary: 'Cria um novo agendamento' })
   @ApiBody({ type: CreateAppointmentDto })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Chave única para deduplicar retries de criação.',
+  })
   @ApiOkResponse({ description: 'Agendamento criado com sucesso.' })
   @ApiBadRequestResponse({
     description: 'Dados invalidos para criacao do agendamento.',
+    type: ApiErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description:
+      'Conflito de agenda ou chave idempotente em processamento/payload divergente.',
     type: ApiErrorResponseDto,
   })
   @ApiUnauthorizedResponse({
@@ -48,9 +62,18 @@ export class AppointmentController {
   @UseGuards(JwtAuthGuard)
   create(
     @Body() createAppointmentDto: CreateAppointmentDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.appointmentService.create(createAppointmentDto, user.sub);
+    if (!idempotencyKey?.trim()) {
+      throw new BadRequestException('Cabecalho Idempotency-Key é obrigatório.');
+    }
+
+    return this.appointmentService.create(
+      createAppointmentDto,
+      user.sub,
+      idempotencyKey,
+    );
   }
 
   @ApiOperation({ summary: 'Lista todos os agendamentos' })

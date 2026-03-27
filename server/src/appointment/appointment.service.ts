@@ -9,6 +9,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
+import { IdempotencyService } from '../common/idempotency/idempotency.service';
 
 type ExistingAppointment = {
   appointmentDate: Date;
@@ -17,48 +18,75 @@ type ExistingAppointment = {
 
 @Injectable()
 export class AppointmentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly idempotency: IdempotencyService,
+  ) {}
 
-  async create(dto: CreateAppointmentDto, userId: string) {
-    return this.withSerializableRetry(() =>
-      this.prisma.$transaction(
-        async (tx) => {
-          const service = await this.getServiceOrThrow(tx, dto.serviceId);
-          const employee = await this.getEmployeeOrThrow(tx, dto.employeeId);
+  async create(
+    dto: CreateAppointmentDto,
+    userId: string,
+    idempotencyKey: string,
+  ) {
+    const scope = `POST:/appointment:user:${userId}`;
+    const response = await this.idempotency.execute({
+      scope,
+      key: idempotencyKey,
+      payload: dto,
+      run: async () => {
+        const appointment = await this.withSerializableRetry(() =>
+          this.prisma.$transaction(
+            async (tx) => {
+              const service = await this.getServiceOrThrow(tx, dto.serviceId);
+              const employee = await this.getEmployeeOrThrow(
+                tx,
+                dto.employeeId,
+              );
 
-          this.assertEmployeeAndServiceSameCompany(
-            employee.companyId,
-            service.companyId,
-          );
+              this.assertEmployeeAndServiceSameCompany(
+                employee.companyId,
+                service.companyId,
+              );
 
-          const companyId = employee.companyId;
-          const customer = await this.getOrCreateCustomer(
-            tx,
-            userId,
-            companyId,
-          );
+              const companyId = employee.companyId;
+              const customer = await this.getOrCreateCustomer(
+                tx,
+                userId,
+                companyId,
+              );
 
-          const start = this.parseAppointmentDateOrThrow(dto.appointmentDate);
-          const end = this.computeEndDate(start, service.durationMinutes);
+              const start = this.parseAppointmentDateOrThrow(
+                dto.appointmentDate,
+              );
+              const end = this.computeEndDate(start, service.durationMinutes);
 
-          await this.assertNoOverlap(tx, {
-            companyId,
-            employeeId: employee.id,
-            start,
-            end,
-          });
+              await this.assertNoOverlap(tx, {
+                companyId,
+                employeeId: employee.id,
+                start,
+                end,
+              });
 
-          return this.createAppointment(tx, {
-            companyId,
-            employeeId: employee.id,
-            serviceId: service.id,
-            customerId: customer.id,
-            appointmentDate: start,
-          });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      ),
-    );
+              return this.createAppointment(tx, {
+                companyId,
+                employeeId: employee.id,
+                serviceId: service.id,
+                customerId: customer.id,
+                appointmentDate: start,
+              });
+            },
+            { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+          ),
+        );
+
+        return {
+          statusCode: 200,
+          body: appointment,
+        };
+      },
+    });
+
+    return response.body;
   }
 
   findAll() {

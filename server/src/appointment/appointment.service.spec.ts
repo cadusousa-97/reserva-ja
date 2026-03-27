@@ -8,11 +8,16 @@ import { Prisma } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { AppointmentService } from './appointment.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { IdempotencyService } from '../common/idempotency/idempotency.service';
+import { CreateAppointmentDto } from './dto/create-appointment.dto';
 
 describe('AppointmentService', () => {
   let service: AppointmentService;
   let prisma: {
     $transaction: jest.Mock;
+  };
+  let idempotency: {
+    execute: jest.Mock;
   };
 
   const userId = 'user-1';
@@ -26,6 +31,15 @@ describe('AppointmentService', () => {
       code,
       clientVersion: '6.19.0',
     });
+
+  const makeCreateDto = (
+    overrides: Partial<CreateAppointmentDto> = {},
+  ): CreateAppointmentDto => ({
+    employeeId,
+    serviceId,
+    appointmentDate: '2026-03-14T10:00:00.000Z',
+    ...overrides,
+  });
 
   const makeTx = (overrides?: Partial<any>) => {
     const tx = {
@@ -88,11 +102,20 @@ describe('AppointmentService', () => {
               }),
           },
         },
+        {
+          provide: IdempotencyService,
+          useValue: {
+            execute: jest.fn().mockImplementation(async (params: any) => {
+              return params.run();
+            }),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<AppointmentService>(AppointmentService);
     prisma = module.get(PrismaService);
+    idempotency = module.get(IdempotencyService);
   });
 
   it('should be defined', () => {
@@ -100,13 +123,9 @@ describe('AppointmentService', () => {
   });
 
   it('create() should create appointment for a customer', async () => {
-    const dto = {
-      employeeId,
-      serviceId,
-      appointmentDate: '2026-03-14T10:00:00.000Z',
-    };
+    const dto = makeCreateDto();
 
-    const result = await service.create(dto as any, userId);
+    const result = await service.create(dto, userId, 'idem-1');
 
     expect(prisma.$transaction).toHaveBeenCalledWith(
       expect.any(Function),
@@ -128,14 +147,16 @@ describe('AppointmentService', () => {
       customerId,
       status: 'SCHEDULED',
     });
+    expect(idempotency.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: `POST:/appointment:user:${userId}`,
+        key: 'idem-1',
+      }),
+    );
   });
 
   it('create() should create customer profile if missing', async () => {
-    const dto = {
-      employeeId,
-      serviceId,
-      appointmentDate: '2026-03-14T10:00:00.000Z',
-    };
+    const dto = makeCreateDto();
 
     const tx = makeTx({
       customer: {
@@ -150,7 +171,7 @@ describe('AppointmentService', () => {
 
     prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
-    const result = await service.create(dto as any, userId);
+    const result = await service.create(dto, userId, 'idem-1');
     expect(tx.customer.create).toHaveBeenCalledWith({
       data: { userId, companyId },
     });
@@ -159,11 +180,7 @@ describe('AppointmentService', () => {
   });
 
   it('create() should handle customer create race (P2002) by refetching', async () => {
-    const dto = {
-      employeeId,
-      serviceId,
-      appointmentDate: '2026-03-14T10:00:00.000Z',
-    };
+    const dto = makeCreateDto();
 
     const tx = makeTx({
       customer: {
@@ -178,18 +195,14 @@ describe('AppointmentService', () => {
 
     prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
-    const result = await service.create(dto as any, userId);
+    const result = await service.create(dto, userId, 'idem-1');
     expect(tx.customer.create).toHaveBeenCalled();
     expect(tx.customer.findFirst).toHaveBeenCalledTimes(2);
     expect(result).toMatchObject({ customerId });
   });
 
   it('create() should throw NotFoundException when service does not exist', async () => {
-    const dto = {
-      employeeId,
-      serviceId,
-      appointmentDate: '2026-03-14T10:00:00.000Z',
-    };
+    const dto = makeCreateDto();
 
     const tx = makeTx({
       service: {
@@ -198,17 +211,13 @@ describe('AppointmentService', () => {
     });
     prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
-    await expect(service.create(dto as any, userId)).rejects.toThrow(
+    await expect(service.create(dto, userId, 'idem-1')).rejects.toThrow(
       NotFoundException,
     );
   });
 
   it('create() should throw NotFoundException when service is inactive', async () => {
-    const dto = {
-      employeeId,
-      serviceId,
-      appointmentDate: '2026-03-14T10:00:00.000Z',
-    };
+    const dto = makeCreateDto();
 
     const tx = makeTx({
       service: {
@@ -222,17 +231,13 @@ describe('AppointmentService', () => {
     });
     prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
-    await expect(service.create(dto as any, userId)).rejects.toThrow(
+    await expect(service.create(dto, userId, 'idem-1')).rejects.toThrow(
       NotFoundException,
     );
   });
 
   it('create() should throw NotFoundException when employee does not exist', async () => {
-    const dto = {
-      employeeId,
-      serviceId,
-      appointmentDate: '2026-03-14T10:00:00.000Z',
-    };
+    const dto = makeCreateDto();
 
     const tx = makeTx({
       employee: {
@@ -241,17 +246,13 @@ describe('AppointmentService', () => {
     });
     prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
-    await expect(service.create(dto as any, userId)).rejects.toThrow(
+    await expect(service.create(dto, userId, 'idem-1')).rejects.toThrow(
       NotFoundException,
     );
   });
 
   it('create() should throw ConflictException when employee/service company mismatch', async () => {
-    const dto = {
-      employeeId,
-      serviceId,
-      appointmentDate: '2026-03-14T10:00:00.000Z',
-    };
+    const dto = makeCreateDto();
 
     const tx = makeTx({
       employee: {
@@ -263,29 +264,21 @@ describe('AppointmentService', () => {
     });
     prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
-    await expect(service.create(dto as any, userId)).rejects.toThrow(
+    await expect(service.create(dto, userId, 'idem-1')).rejects.toThrow(
       ConflictException,
     );
   });
 
   it('create() should throw BadRequestException for invalid appointmentDate', async () => {
-    const dto = {
-      employeeId,
-      serviceId,
-      appointmentDate: 'not-a-date',
-    };
+    const dto = makeCreateDto({ appointmentDate: 'not-a-date' });
 
-    await expect(service.create(dto as any, userId)).rejects.toThrow(
+    await expect(service.create(dto, userId, 'idem-1')).rejects.toThrow(
       BadRequestException,
     );
   });
 
   it('create() should throw ConflictException when time overlaps existing appointment', async () => {
-    const dto = {
-      employeeId,
-      serviceId,
-      appointmentDate: '2026-03-14T10:30:00.000Z',
-    };
+    const dto = makeCreateDto({ appointmentDate: '2026-03-14T10:30:00.000Z' });
 
     const tx = makeTx({
       service: {
@@ -309,18 +302,14 @@ describe('AppointmentService', () => {
 
     prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
-    await expect(service.create(dto as any, userId)).rejects.toThrow(
+    await expect(service.create(dto, userId, 'idem-1')).rejects.toThrow(
       ConflictException,
     );
     expect(tx.appointment.create).not.toHaveBeenCalled();
   });
 
   it('create() should retry on serializable abort (P2034)', async () => {
-    const dto = {
-      employeeId,
-      serviceId,
-      appointmentDate: '2026-03-14T10:00:00.000Z',
-    };
+    const dto = makeCreateDto();
 
     const tx = makeTx();
 
@@ -328,7 +317,7 @@ describe('AppointmentService', () => {
       .mockRejectedValueOnce(makePckre('P2034'))
       .mockImplementationOnce((cb: any, _opts: any) => cb(tx));
 
-    const result = await service.create(dto as any, userId);
+    const result = await service.create(dto, userId, 'idem-1');
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(2);
     expect(result).toMatchObject({ status: 'SCHEDULED' });
