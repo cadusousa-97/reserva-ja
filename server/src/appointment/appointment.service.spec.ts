@@ -86,6 +86,7 @@ describe('AppointmentService', () => {
           serviceId,
           status: 'SCHEDULED',
           appointmentDate: new Date('2026-03-14T10:00:00.000Z'),
+          appointmentEndDate: new Date('2026-03-14T10:30:00.000Z'),
           customer: { userId },
           service: { durationMinutes: 30 },
         }),
@@ -97,6 +98,8 @@ describe('AppointmentService', () => {
           serviceId,
           customerId,
           status: 'SCHEDULED',
+          appointmentDate: new Date('2026-03-14T10:00:00.000Z'),
+          appointmentEndDate: new Date('2026-03-14T10:30:00.000Z'),
         }),
         update: jest.fn().mockResolvedValue({
           id: appointmentId,
@@ -106,6 +109,7 @@ describe('AppointmentService', () => {
           customerId,
           status: 'SCHEDULED',
           appointmentDate: new Date('2026-03-14T11:00:00.000Z'),
+          appointmentEndDate: new Date('2026-03-14T11:30:00.000Z'),
         }),
       },
       ...overrides,
@@ -203,7 +207,14 @@ describe('AppointmentService', () => {
     expect(tx.customer.create).toHaveBeenCalledWith({
       data: { userId, companyId },
     });
-    expect(tx.appointment.create).toHaveBeenCalled();
+    expect(tx.appointment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          appointmentDate: new Date('2026-03-14T10:00:00.000Z'),
+          appointmentEndDate: new Date('2026-03-14T10:30:00.000Z'),
+        }),
+      }),
+    );
     expect(result).toMatchObject({ customerId });
   });
 
@@ -321,7 +332,7 @@ describe('AppointmentService', () => {
         findMany: jest.fn().mockResolvedValue([
           {
             appointmentDate: new Date('2026-03-14T10:00:00.000Z'),
-            service: { durationMinutes: 60 },
+            appointmentEndDate: new Date('2026-03-14T11:00:00.000Z'),
           },
         ] as any),
         create: jest.fn(),
@@ -367,6 +378,7 @@ describe('AppointmentService', () => {
         where: { id: appointmentId },
         data: expect.objectContaining({
           appointmentDate: new Date('2026-03-14T11:00:00.000Z'),
+          appointmentEndDate: new Date('2026-03-14T11:30:00.000Z'),
         }),
       }),
     );
@@ -395,6 +407,7 @@ describe('AppointmentService', () => {
           serviceId,
           status: 'SCHEDULED',
           appointmentDate: new Date('2026-03-14T10:00:00.000Z'),
+          appointmentEndDate: new Date('2026-03-14T10:30:00.000Z'),
           customer: { userId: 'other-user' },
           service: { durationMinutes: 30 },
         }),
@@ -425,6 +438,7 @@ describe('AppointmentService', () => {
           serviceId,
           status: 'SCHEDULED',
           appointmentDate: new Date('2026-03-14T10:00:00.000Z'),
+          appointmentEndDate: new Date('2026-03-14T10:30:00.000Z'),
           customer: { userId },
           service: { durationMinutes: 30 },
         }),
@@ -432,7 +446,7 @@ describe('AppointmentService', () => {
           {
             id: 'apt-2',
             appointmentDate: new Date('2026-03-14T11:00:00.000Z'),
-            service: { durationMinutes: 60 },
+            appointmentEndDate: new Date('2026-03-14T12:00:00.000Z'),
           },
         ]),
         update: jest.fn(),

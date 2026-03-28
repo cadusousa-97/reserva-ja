@@ -18,6 +18,7 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
     type ResponseOptions = Record<string, ResponseData>;
 
     const targetRaw = exception.meta?.target;
+
     const targetField = Array.isArray(targetRaw)
       ? targetRaw
           .map((value) => (typeof value === 'string' ? value : 'desconhecido'))
@@ -25,9 +26,25 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
       : typeof targetRaw === 'string'
         ? targetRaw
         : 'desconhecido';
+
     const fieldNameRaw = exception.meta?.field_name;
     const foreignField =
       typeof fieldNameRaw === 'string' ? fieldNameRaw : 'desconhecido';
+    const databaseErrorRaw = exception.meta?.database_error;
+    const databaseError =
+      typeof databaseErrorRaw === 'string' ? databaseErrorRaw : '';
+
+    if (
+      exception.code === 'P2004' &&
+      databaseError.includes('appointment_no_overlap_per_employee')
+    ) {
+      response.status(409).json({
+        status: 409,
+        message: ['Horário indisponível para este funcionário.'],
+        error: 'CONFLICT',
+      });
+      return;
+    }
 
     const exceptionResponses: ResponseOptions = {
       P2002: {

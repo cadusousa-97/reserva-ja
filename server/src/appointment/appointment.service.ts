@@ -13,7 +13,7 @@ import { IdempotencyService } from '../common/idempotency/idempotency.service';
 
 type ExistingAppointment = {
   appointmentDate: Date;
-  service: { durationMinutes: number } | null;
+  appointmentEndDate: Date;
 };
 
 @Injectable()
@@ -73,6 +73,7 @@ export class AppointmentService {
                 serviceId: service.id,
                 customerId: customer.id,
                 appointmentDate: start,
+                appointmentEndDate: end,
               });
             },
             { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -184,6 +185,7 @@ export class AppointmentService {
                 data: {
                   employeeId: targetEmployeeId,
                   appointmentDate: targetStart,
+                  appointmentEndDate: targetEnd,
                 },
                 include: { employee: true, customer: true, service: true },
               });
@@ -343,7 +345,10 @@ export class AppointmentService {
         status: { not: AppointmentStatus.CANCELED },
         appointmentDate: { gte: dayStart, lt: dayEnd },
       },
-      include: { service: { select: { durationMinutes: true } } },
+      select: {
+        appointmentDate: true,
+        appointmentEndDate: true,
+      },
       orderBy: { appointmentDate: 'asc' },
     });
   }
@@ -356,8 +361,7 @@ export class AppointmentService {
 
     return existing.some((apt) => {
       const aptStart = apt.appointmentDate;
-      const aptDurationMs = (apt.service?.durationMinutes ?? 30) * 60 * 1000;
-      const aptEnd = new Date(aptStart.getTime() + aptDurationMs);
+      const aptEnd = apt.appointmentEndDate;
       return start < aptEnd && end > aptStart;
     });
   }
@@ -398,10 +402,17 @@ export class AppointmentService {
       serviceId: string;
       customerId: string;
       appointmentDate: Date;
+      appointmentEndDate: Date;
     },
   ) {
-    const { companyId, employeeId, serviceId, customerId, appointmentDate } =
-      params;
+    const {
+      companyId,
+      employeeId,
+      serviceId,
+      customerId,
+      appointmentDate,
+      appointmentEndDate,
+    } = params;
 
     return tx.appointment.create({
       data: {
@@ -410,6 +421,7 @@ export class AppointmentService {
         serviceId,
         customerId,
         appointmentDate,
+        appointmentEndDate,
         status: AppointmentStatus.SCHEDULED,
       },
       include: { employee: true, customer: true, service: true },
