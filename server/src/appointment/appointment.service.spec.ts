@@ -10,6 +10,7 @@ import { AppointmentService } from './appointment.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { IdempotencyService } from '../common/idempotency/idempotency.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 
 describe('AppointmentService', () => {
   let service: AppointmentService;
@@ -25,6 +26,7 @@ describe('AppointmentService', () => {
   const employeeId = 'emp-1';
   const serviceId = 'svc-1';
   const customerId = 'cust-1';
+  const appointmentId = 'apt-1';
 
   const makePckre = (code: string) =>
     new PrismaClientKnownRequestError('err', {
@@ -38,6 +40,12 @@ describe('AppointmentService', () => {
     employeeId,
     serviceId,
     appointmentDate: '2026-03-14T10:00:00.000Z',
+    ...overrides,
+  });
+
+  const makeUpdateDto = (
+    overrides: Partial<UpdateAppointmentDto> = {},
+  ): UpdateAppointmentDto => ({
     ...overrides,
   });
 
@@ -70,14 +78,34 @@ describe('AppointmentService', () => {
         }),
       },
       appointment: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: appointmentId,
+          companyId,
+          employeeId,
+          customerId,
+          serviceId,
+          status: 'SCHEDULED',
+          appointmentDate: new Date('2026-03-14T10:00:00.000Z'),
+          customer: { userId },
+          service: { durationMinutes: 30 },
+        }),
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn().mockResolvedValue({
-          id: 'apt-1',
+          id: appointmentId,
           companyId,
           employeeId,
           serviceId,
           customerId,
           status: 'SCHEDULED',
+        }),
+        update: jest.fn().mockResolvedValue({
+          id: appointmentId,
+          companyId,
+          employeeId,
+          serviceId,
+          customerId,
+          status: 'SCHEDULED',
+          appointmentDate: new Date('2026-03-14T11:00:00.000Z'),
         }),
       },
       ...overrides,
@@ -321,5 +349,105 @@ describe('AppointmentService', () => {
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(2);
     expect(result).toMatchObject({ status: 'SCHEDULED' });
+  });
+
+  it('update() should reschedule appointment and call idempotency scope', async () => {
+    const dto = makeUpdateDto({
+      appointmentDate: '2026-03-14T11:00:00.000Z',
+    });
+    const tx = makeTx();
+
+    prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
+
+    const result = await service.update(appointmentId, dto, userId, 'idem-u1');
+
+    expect(result).toMatchObject({ id: appointmentId, status: 'SCHEDULED' });
+    expect(tx.appointment.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: appointmentId },
+        data: expect.objectContaining({
+          appointmentDate: new Date('2026-03-14T11:00:00.000Z'),
+        }),
+      }),
+    );
+    expect(idempotency.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: `PATCH:/appointment:${appointmentId}:user:${userId}`,
+        key: 'idem-u1',
+      }),
+    );
+  });
+
+  it('update() should throw BadRequestException when payload is empty', async () => {
+    await expect(
+      service.update(appointmentId, makeUpdateDto(), userId, 'idem-u1'),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('update() should throw NotFoundException when appointment does not belong to user', async () => {
+    const tx = makeTx({
+      appointment: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: appointmentId,
+          companyId,
+          employeeId,
+          customerId,
+          serviceId,
+          status: 'SCHEDULED',
+          appointmentDate: new Date('2026-03-14T10:00:00.000Z'),
+          customer: { userId: 'other-user' },
+          service: { durationMinutes: 30 },
+        }),
+        findMany: jest.fn().mockResolvedValue([]),
+        update: jest.fn(),
+      },
+    });
+    prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
+
+    await expect(
+      service.update(
+        appointmentId,
+        makeUpdateDto({ appointmentDate: '2026-03-14T11:00:00.000Z' }),
+        userId,
+        'idem-u1',
+      ),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('update() should throw ConflictException when target slot overlaps', async () => {
+    const tx = makeTx({
+      appointment: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: appointmentId,
+          companyId,
+          employeeId,
+          customerId,
+          serviceId,
+          status: 'SCHEDULED',
+          appointmentDate: new Date('2026-03-14T10:00:00.000Z'),
+          customer: { userId },
+          service: { durationMinutes: 30 },
+        }),
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'apt-2',
+            appointmentDate: new Date('2026-03-14T11:00:00.000Z'),
+            service: { durationMinutes: 60 },
+          },
+        ]),
+        update: jest.fn(),
+      },
+    });
+    prisma.$transaction.mockImplementationOnce((cb: any, _opts: any) => cb(tx));
+
+    await expect(
+      service.update(
+        appointmentId,
+        makeUpdateDto({ appointmentDate: '2026-03-14T11:30:00.000Z' }),
+        userId,
+        'idem-u1',
+      ),
+    ).rejects.toThrow(ConflictException);
+    expect(tx.appointment.update).not.toHaveBeenCalled();
   });
 });

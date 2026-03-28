@@ -97,9 +97,109 @@ export class AppointmentService {
     return `This action returns a #${id} appointment`;
   }
 
-  update(id: string, updateAppointmentDto: UpdateAppointmentDto) {
-    void updateAppointmentDto;
-    return `This action updates a #${id} appointment`;
+  async update(
+    id: string,
+    dto: UpdateAppointmentDto,
+    userId: string,
+    idempotencyKey: string,
+  ) {
+    if (!dto.appointmentDate && !dto.employeeId) {
+      throw new BadRequestException(
+        'Informe appointmentDate e/ou employeeId para remarcação.',
+      );
+    }
+
+    const scope = `PATCH:/appointment:${id}:user:${userId}`;
+    const response = await this.idempotency.execute({
+      scope,
+      key: idempotencyKey,
+      payload: dto,
+      run: async () => {
+        const appointment = await this.withSerializableRetry(() =>
+          this.prisma.$transaction(
+            async (tx) => {
+              const existing = await tx.appointment.findUnique({
+                where: { id },
+                include: {
+                  customer: { select: { userId: true } },
+                  service: { select: { durationMinutes: true } },
+                },
+              });
+
+              if (!existing) {
+                throw new NotFoundException('Agendamento não encontrado.');
+              }
+
+              if (existing.customer?.userId !== userId) {
+                throw new NotFoundException('Agendamento não encontrado.');
+              }
+
+              if (existing.status !== AppointmentStatus.SCHEDULED) {
+                throw new ConflictException(
+                  'Somente agendamentos pendentes podem ser remarcados.',
+                );
+              }
+
+              if (!existing.companyId || !existing.serviceId) {
+                throw new ConflictException(
+                  'Agendamento inválido para remarcação.',
+                );
+              }
+
+              const targetEmployeeId = dto.employeeId ?? existing.employeeId;
+              if (!targetEmployeeId) {
+                throw new ConflictException(
+                  'Agendamento inválido sem profissional definido.',
+                );
+              }
+
+              const employee = await this.getEmployeeOrThrow(
+                tx,
+                targetEmployeeId,
+              );
+              this.assertEmployeeAndServiceSameCompany(
+                employee.companyId,
+                existing.companyId,
+              );
+
+              const targetStart = dto.appointmentDate
+                ? this.parseAppointmentDateOrThrow(dto.appointmentDate)
+                : existing.appointmentDate;
+              const durationMinutes = existing.service?.durationMinutes ?? 30;
+              const targetEnd = this.computeEndDate(
+                targetStart,
+                durationMinutes,
+              );
+
+              await this.assertNoOverlap(tx, {
+                companyId: existing.companyId,
+                employeeId: targetEmployeeId,
+                start: targetStart,
+                end: targetEnd,
+                excludeAppointmentId: existing.id,
+              });
+
+              return tx.appointment.update({
+                where: { id: existing.id },
+                data: {
+                  employeeId: targetEmployeeId,
+                  appointmentDate: targetStart,
+                },
+                include: { employee: true, customer: true, service: true },
+              });
+            },
+            { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+          ),
+        );
+
+        return {
+          statusCode: 200,
+          body: appointment,
+        };
+      },
+    });
+
+    return response.body;
   }
 
   remove(id: string) {
@@ -229,14 +329,17 @@ export class AppointmentService {
       employeeId: string;
       dayStart: Date;
       dayEnd: Date;
+      excludeAppointmentId?: string;
     },
   ): Promise<ExistingAppointment[]> {
-    const { companyId, employeeId, dayStart, dayEnd } = params;
+    const { companyId, employeeId, dayStart, dayEnd, excludeAppointmentId } =
+      params;
 
     return tx.appointment.findMany({
       where: {
         companyId,
         employeeId,
+        ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
         status: { not: AppointmentStatus.CANCELED },
         appointmentDate: { gte: dayStart, lt: dayEnd },
       },
@@ -266,9 +369,10 @@ export class AppointmentService {
       employeeId: string;
       start: Date;
       end: Date;
+      excludeAppointmentId?: string;
     },
   ) {
-    const { companyId, employeeId, start, end } = params;
+    const { companyId, employeeId, start, end, excludeAppointmentId } = params;
     const { dayStart, dayEnd } = this.getUtcDayBounds(start);
 
     const existing = await this.getExistingAppointmentsForDay(tx, {
@@ -276,11 +380,12 @@ export class AppointmentService {
       employeeId,
       dayStart,
       dayEnd,
+      excludeAppointmentId,
     });
 
     if (this.hasAnyOverlap(existing, { start, end })) {
       throw new ConflictException(
-        'Horario indisponivel para este funcionario.',
+        'Horário indisponível para este funcionário.',
       );
     }
   }

@@ -55,7 +55,7 @@ export class AppointmentController {
     type: ApiErrorResponseDto,
   })
   @ApiUnauthorizedResponse({
-    description: 'Usuario nao autenticado.',
+    description: 'Usuario não autenticado.',
     type: ApiErrorResponseDto,
   })
   @Post()
@@ -108,17 +108,42 @@ export class AppointmentController {
     example: '5f3c6a41-1d47-4efc-9a9e-f22bd62d4dad',
   })
   @ApiBody({ type: UpdateAppointmentDto })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Chave única para deduplicar retries de remarcação.',
+  })
   @ApiOkResponse({ description: 'Agendamento atualizado com sucesso.' })
   @ApiBadRequestResponse({
-    description: 'Dados invalidos ou ID incorreto.',
+    description: 'Dados inválidos ou ID incorreto.',
+    type: ApiErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description: 'Conflito de agenda ou chave idempotente em andamento.',
+    type: ApiErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Usuário não autenticado.',
     type: ApiErrorResponseDto,
   })
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateAppointmentDto: UpdateAppointmentDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.appointmentService.update(id, updateAppointmentDto);
+    if (!idempotencyKey?.trim()) {
+      throw new BadRequestException('Cabeçalho Idempotency-Key é obrigatório.');
+    }
+
+    return this.appointmentService.update(
+      id,
+      updateAppointmentDto,
+      user.sub,
+      idempotencyKey,
+    );
   }
 
   @ApiOperation({ summary: 'Remove um agendamento' })
